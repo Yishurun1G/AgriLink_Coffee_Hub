@@ -1,0 +1,22 @@
+# Backend
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# React / Frontend
+node_modules/
+dist/
+build/
+.env
+
+# Django
+db.sqlite3
+media/
+staticfiles/
