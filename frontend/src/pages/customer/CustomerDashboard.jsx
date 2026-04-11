@@ -1,51 +1,132 @@
-import { Link } from 'react-router-dom';
+// src/pages/customer/CustomerDashboard.jsx
+
+import React, { useState, useEffect } from 'react';
+import api from '../../api/axios';
+import BatchCard from '../../components/common/BatchCard';
 
 const CustomerDashboard = () => {
-    return (
-        <div className="min-h-[calc(100vh-4rem)] bg-gray-50 p-8">
-            <div className="max-w-5xl mx-auto">
-                
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-2xl font-bold text-gray-800">Welcome to AgriLink!</h1>
-                    <p className="text-gray-600 mt-1">
-                        Trace your coffee's journey from the farm directly to your cup.
-                    </p>
-                </div>
+  const [batches, setBatches] = useState([]);
+  const [filteredBatches, setFilteredBatches] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-                {/* Main Action: Search Bar */}
-                <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-sm mb-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Trace a Batch</h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                        Enter a unique Coffee Batch ID to verify its authenticity and view its supply chain history.
-                    </p>
-                    <div className="flex gap-4">
-                        <input
-                            type="text"
-                            placeholder="e.g., BTCH-2026-X982"
-                            className="flex-grow rounded-md border border-gray-300 px-4 py-2 
-                            focus:border-green-500 focus:ring-green-500 text-sm"
-                        />
-                        <button className="bg-green-600 text-white px-6 py-2 rounded-md 
-                        hover:bg-green-700 transition font-medium text-sm">
-                            Trace Batch
-                        </button>
-                    </div>
-                </div>
+  // ✅ Fetch ONLY approved batches (BEST PRACTICE)
+  const fetchApprovedBatches = async () => {
+    try {
+      setLoading(true);
 
-                {/* History Grid */}
-                <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Your Recent Searches</h3>
-                    
-                    {/* Placeholder table for searched history */}
-                    <p className="text-sm text-gray-500 italic">
-                        You haven't traced any batches yet. Enter a batch ID above to get started!
-                    </p>
-                </div>
+      const res = await api.get('/batches/approved/');
+      const data = Array.isArray(res.data) ? res.data : [];
+
+      console.log("Approved batches:", data);
+
+      setBatches(data);
+      setFilteredBatches(data);
+
+    } catch (err) {
+      console.error("Error fetching batches:", err);
+      setError("Failed to load approved coffee batches.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchApprovedBatches();
+  }, []);
+
+  // ✅ Search filter
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredBatches(batches);
+    } else {
+      const term = searchTerm.toLowerCase();
+
+      const filtered = batches.filter(batch =>
+        batch.id?.toString().toLowerCase().includes(term) ||
+        batch.origin?.toLowerCase().includes(term) ||
+        batch.coffee_type?.toLowerCase().includes(term)
+      );
+
+      setFilteredBatches(filtered);
+    }
+  }, [searchTerm, batches]);
+
+  // ✅ Order handler (placeholder for now)
+  const handleOrder = (batch) => {
+    alert(`Order placed for Batch ID: ${batch.id}`);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-10 px-4">
+      <div className="max-w-7xl mx-auto">
+
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold text-gray-900">
+            ☕ Explore Coffee Batches
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Browse verified and approved coffee products
+          </p>
+        </div>
+
+        {/* Search */}
+        <div className="max-w-2xl mx-auto mb-10">
+          <input
+            type="text"
+            placeholder="Search by Batch ID, origin, or type..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-5 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:outline-none"
+          />
+        </div>
+
+        {/* Loading */}
+        {loading && (
+          <div className="text-center py-20 text-gray-500">
+            Loading approved batches...
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="text-center text-red-600 py-10">
+            {error}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && filteredBatches.length === 0 && (
+          <div className="text-center py-20 text-gray-500">
+            No approved batches found.
+          </div>
+        )}
+
+        {/* Batch Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredBatches.map((batch) => (
+            <div key={batch.id} className="relative group">
+              
+              {/* Batch Card */}
+              <BatchCard batch={batch} userRole="CUSTOMER" />
+
+              {/* Order Button */}
+              <button
+                onClick={() => handleOrder(batch)}
+                className="absolute bottom-4 right-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow opacity-0 group-hover:opacity-100 transition"
+              >
+                Order
+              </button>
 
             </div>
+          ))}
         </div>
-    );
+
+      </div>
+    </div>
+  );
 };
 
 export default CustomerDashboard;

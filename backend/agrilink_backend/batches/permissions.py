@@ -2,42 +2,43 @@
 from rest_framework import permissions
 
 class IsDealer(permissions.BasePermission):
-    """
-    Only users with role == 'DEALER' can create batches.
-    """
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return getattr(request.user, 'role', None) == 'DEALER'   # ← Changed to uppercase
+        return getattr(request.user, 'role', None) == 'DEALER'
 
 
 class IsManager(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        return getattr(request.user, 'role', None) == 'MANAGER'
+
+
+class IsOwnerOrManagerOrCustomer(permissions.BasePermission):
     """
-    Only users with role == 'MANAGER' can approve or reject batches.
+    - Dealers → see only their own batches
+    - Managers → see all batches
+    - Customers → see only APPROVED batches
     """
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return getattr(request.user, 'role', None) == 'MANAGER'   # ← Changed to uppercase
+        return True  # Allow all authenticated users to list (filtering done in object permission)
 
-
-class IsOwnerOrManager(permissions.BasePermission):
-    """
-    Dealers can only see their own batches.
-    Managers can see all batches.
-    """
     def has_object_permission(self, request, view, obj):
         if not request.user.is_authenticated:
             return False
 
-        user_role = getattr(request.user, 'role', None)
+        role = getattr(request.user, 'role', None)
 
-        # Managers can see and modify any batch
-        if user_role == 'MANAGER':
+        if role in ['MANAGER', 'ADMIN']:
             return True
 
-        # Dealers can only see their own batches
-        if user_role == 'DEALER':
-            return obj.dealer == request.user
+        if role == 'CUSTOMER':
+            return obj.status == 'APPROVED'   # Customers can only see approved batches
+
+        if role == 'DEALER':
+            return obj.dealer == request.user   # Dealers see only their own
 
         return False
