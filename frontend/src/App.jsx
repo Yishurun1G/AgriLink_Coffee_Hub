@@ -1,121 +1,114 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+// src/App.jsx
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';   // ← Fixed import
+import ProtectedRoute from './components/common/ProtectedRoute';
 
-function App() {
-  const [count, setCount] = useState(0)
+import Navbar from './components/common/Navbar';
+import Footer from './components/common/Footer';
+import AuthPage from './pages/AuthPage';
+
+// Import your real dashboards
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ManagerDashboard from './pages/manager/ManagerDashboard';
+import DealerDashboard from './pages/dealer/DealerDashboard';
+import CustomerDashboard from './pages/customer/CustomerDashboard';
+
+function AppContent() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-2xl text-gray-600">Loading...</div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Navbar />
 
-      <div className="ticks"></div>
+      <main className="flex-grow">
+        <Routes>
+          {/* Public Route */}
+          <Route path="/auth" element={<AuthPage />} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          {/* Protected Routes */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          <Route 
+            path="/manager" 
+            element={
+              <ProtectedRoute allowedRoles={['MANAGER', 'ADMIN']}>
+                <ManagerDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/dealer" 
+            element={
+              <ProtectedRoute allowedRoles={['DEALER']}>
+                <DealerDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/customer" 
+            element={
+              <ProtectedRoute allowedRoles={['CUSTOMER']}>
+                <CustomerDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Default Redirect After Login */}
+          <Route path="/" element={<RoleBasedRedirect />} />
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/auth" replace />} />
+        </Routes>
+      </main>
+
+      <Footer />
+    </div>
+  );
 }
 
-export default App
+// Role-based Redirect Component
+function RoleBasedRedirect() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  const role = user.role ? user.role.toUpperCase() : '';
+
+  if (role === 'ADMIN') return <Navigate to="/admin" replace />;
+  if (role === 'MANAGER') return <Navigate to="/manager" replace />;
+  if (role === 'DEALER') return <Navigate to="/dealer" replace />;
+  if (role === 'CUSTOMER') return <Navigate to="/customer" replace />;
+
+  return <Navigate to="/auth" replace />;
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
+  );
+}
+
+export default App;
