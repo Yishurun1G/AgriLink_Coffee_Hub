@@ -46,6 +46,7 @@ INSTALLED_APPS = [
      'tracking',
      'notifications',
      'reports',
+     'orders',
 ]
 
 MIDDLEWARE = [

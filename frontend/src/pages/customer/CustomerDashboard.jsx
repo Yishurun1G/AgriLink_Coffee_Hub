@@ -1,28 +1,28 @@
 // src/pages/customer/CustomerDashboard.jsx
 
 import React, { useState, useEffect } from 'react';
-import api from '../../api/axios';
+import axios from '../../api/axios';
 import BatchCard from '../../components/common/BatchCard';
 
 const CustomerDashboard = () => {
-  const [batches, setBatches] = useState([]);
-  const [filteredBatches, setFilteredBatches] = useState([]);
+  const [approvedBatches, setApprovedBatches] = useState([]);
+  const [displayedBatches, setDisplayedBatches] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // ✅ Fetch ONLY approved batches (BEST PRACTICE)
+  // ✅ Fetch ONLY approved batches (backend handles filtering)
   const fetchApprovedBatches = async () => {
     try {
       setLoading(true);
 
-      const res = await api.get('/batches/approved/');
-      const data = Array.isArray(res.data) ? res.data : [];
+      const response = await axios.get('/batches/approved/');
+      const data = Array.isArray(response.data) ? response.data : [];
 
       console.log("Approved batches:", data);
 
-      setBatches(data);
-      setFilteredBatches(data);
+      setApprovedBatches(data);
+      setDisplayedBatches(data);
 
     } catch (err) {
       console.error("Error fetching batches:", err);
@@ -36,28 +36,43 @@ const CustomerDashboard = () => {
     fetchApprovedBatches();
   }, []);
 
-  // ✅ Search filter
+  // 🔍 Search functionality
   useEffect(() => {
     if (!searchTerm) {
-      setFilteredBatches(batches);
+      setDisplayedBatches(approvedBatches);
     } else {
       const term = searchTerm.toLowerCase();
 
-      const filtered = batches.filter(batch =>
-        batch.id?.toString().toLowerCase().includes(term) ||
-        batch.origin?.toLowerCase().includes(term) ||
-        batch.coffee_type?.toLowerCase().includes(term)
+      const filtered = approvedBatches.filter(batch =>
+        (batch.id && batch.id.toString().toLowerCase().includes(term)) ||
+        (batch.origin && batch.origin.toLowerCase().includes(term)) ||
+        (batch.coffee_type && batch.coffee_type.toLowerCase().includes(term))
       );
 
-      setFilteredBatches(filtered);
+      setDisplayedBatches(filtered);
     }
-  }, [searchTerm, batches]);
+  }, [searchTerm, approvedBatches]);
 
-  // ✅ Order handler (placeholder for now)
-  const handleOrder = (batch) => {
-    alert(`Order placed for Batch ID: ${batch.id}`);
-  };
+  // 🛒 Order handler (placeholder for now)
+  const handleOrder = async (batch) => {
+  try {
+    const quantity = prompt("Enter quantity (kg):");
 
+    if (!quantity) return;
+
+    await axios.post('/orders/', {
+      batch: batch.id,
+      quantity_kg: parseFloat(quantity),
+      notes: ""
+    });
+
+    alert("✅ Order placed successfully!");
+
+  } catch (error) {
+    console.error(error);
+    alert("❌ Failed to place order");
+  }
+};
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-7xl mx-auto">
@@ -98,7 +113,7 @@ const CustomerDashboard = () => {
         )}
 
         {/* Empty State */}
-        {!loading && filteredBatches.length === 0 && (
+        {!loading && displayedBatches.length === 0 && (
           <div className="text-center py-20 text-gray-500">
             No approved batches found.
           </div>
@@ -106,7 +121,7 @@ const CustomerDashboard = () => {
 
         {/* Batch Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredBatches.map((batch) => (
+          {displayedBatches.map((batch) => (
             <div key={batch.id} className="relative group">
               
               {/* Batch Card */}

@@ -13,17 +13,13 @@ const ManagerDashboard = () => {
   const fetchBatches = async () => {
     try {
       setLoading(true);
-      console.log("Manager fetching all batches...");
 
       const response = await axios.get('/batches/');
-      console.log("Raw response data:", response.data);
 
-      // Handle both array and object responses (DRF router sometimes wraps)
       let data = response.data;
 
-      if (data && typeof data === 'object' && !Array.isArray(data)) {
-        // If it's an object with 'results' (pagination) or just the list
-        data = data.results || Object.values(data).flat() || [];
+      if (data?.results) {
+        data = data.results;
       }
 
       if (!Array.isArray(data)) {
@@ -31,9 +27,9 @@ const ManagerDashboard = () => {
       }
 
       setBatches(data);
-      console.log(`Successfully loaded ${data.length} batches`);
+
     } catch (error) {
-      console.error("Failed to fetch batches for manager:", error);
+      console.error("Failed to fetch batches:", error);
       setBatches([]);
     } finally {
       setLoading(false);
@@ -50,7 +46,6 @@ const ManagerDashboard = () => {
       fetchBatches();
     } catch (error) {
       console.error("Approve failed:", error);
-      alert("Failed to approve the batch");
     }
   };
 
@@ -60,66 +55,55 @@ const ManagerDashboard = () => {
       fetchBatches();
     } catch (error) {
       console.error("Reject failed:", error);
-      alert("Failed to reject the batch");
     }
   };
 
+  // ✅ NORMALIZED FILTER (IMPORTANT FIX)
   const filteredBatches = batches.filter((batch) => {
-    if (activeTab === 'pending') return batch.status === 'PENDING';
-    if (activeTab === 'approved') return batch.status === 'APPROVED';
-    if (activeTab === 'rejected') return batch.status === 'REJECTED';
+    const status = batch.status?.toUpperCase();
+
+    if (activeTab === 'pending') return status === 'PENDING';
+    if (activeTab === 'approved') return status === 'APPROVED';
+    if (activeTab === 'rejected') return status === 'REJECTED';
+
     return true;
   });
+
+  // ✅ SAFE COUNTS (FIXED)
+  const countByStatus = (status) =>
+    batches.filter(b => b.status?.toUpperCase() === status).length;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold text-gray-900">Manager Dashboard</h1>
-          <p className="text-gray-600 mt-2">Review and verify coffee batches from dealers</p>
-        </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 mb-8">
+        <h1 className="text-4xl font-bold mb-2">Manager Dashboard</h1>
+        <p className="text-gray-600 mb-8">Review coffee batches</p>
+
+        {/* TABS */}
+        <div className="flex border-b mb-8">
           {['pending', 'approved', 'rejected'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-8 py-4 font-medium capitalize transition-colors ${
-                activeTab === tab 
-                  ? 'border-b-4 border-blue-600 text-blue-600 font-semibold' 
-                  : 'text-gray-600 hover:text-gray-900'
+              className={`px-6 py-3 capitalize ${
+                activeTab === tab
+                  ? 'border-b-4 border-blue-600 text-blue-600'
+                  : 'text-gray-500'
               }`}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              <span className="ml-2 text-sm">
-                ({filteredBatches.filter(b => 
-                  tab === 'pending' ? b.status === 'PENDING' : 
-                  tab === 'approved' ? b.status === 'APPROVED' : 
-                  b.status === 'REJECTED'
-                ).length})
-              </span>
+              {tab} ({countByStatus(tab.toUpperCase())})
             </button>
           ))}
         </div>
 
+        {/* LOADING */}
         {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full"></div>
-          </div>
+          <p>Loading...</p>
         ) : filteredBatches.length === 0 ? (
-          <div className="bg-white rounded-3xl p-20 text-center">
-            <p className="text-2xl text-gray-400">
-              No {activeTab} batches found
-            </p>
-            <p className="text-gray-500 mt-4">
-              {activeTab === 'pending' 
-                ? "Dealers have not created any batches yet." 
-                : `No ${activeTab} batches yet.`}
-            </p>
-          </div>
+          <p>No {activeTab} batches</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {filteredBatches.map((batch) => (
               <BatchCard
                 key={batch.id}
@@ -131,6 +115,7 @@ const ManagerDashboard = () => {
             ))}
           </div>
         )}
+
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ class BatchViewSet(viewsets.ModelViewSet):
     # 🔐 Permissions
     def get_permissions(self):
         if self.action == 'create':
-            permission_classes = [IsAuthenticated, IsDealer]
+         permission_classes = [IsAuthenticated, IsDealer]
 
         elif self.action in ['approve', 'reject']:
             permission_classes = [IsAuthenticated, IsManager]

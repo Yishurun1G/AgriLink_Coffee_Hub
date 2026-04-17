@@ -26,10 +26,10 @@ class Batch(models.Model):
 
     # 2. Relationships
     dealer = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='created_batches'
-    )
+    settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE,
+    related_name='batches'
+)
 
     validated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

@@ -15,6 +15,7 @@ urlpatterns = [
     # Users App
     path('api/v1/users/', include('users.urls')),
 
-    # Batches App  ← This is the important line
     path('api/v1/', include('batches.urls')),
+
+    path('api/v1/', include('orders.urls')),
 ]
