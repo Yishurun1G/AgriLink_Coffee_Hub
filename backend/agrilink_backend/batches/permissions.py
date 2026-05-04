@@ -25,7 +25,7 @@ class IsOwnerOrManagerOrCustomer(permissions.BasePermission):
         if not request.user.is_authenticated:
             return False
         return True  # Allow all authenticated users to list (filtering done in object permission)
-
+    
     def has_object_permission(self, request, view, obj):
         if not request.user.is_authenticated:
             return False

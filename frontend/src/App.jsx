@@ -1,17 +1,20 @@
 // src/App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';   // ← Fixed import
+import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
 import AuthPage from './pages/AuthPage';
 
-// Import your real dashboards
+// Dashboards
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 import DealerDashboard from './pages/dealer/DealerDashboard';
 import CustomerDashboard from './pages/customer/CustomerDashboard';
+
+// ✅ IMPORT CHAT
+import ChatPage from './pages/chat/ChatPage';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -30,10 +33,10 @@ function AppContent() {
 
       <main className="flex-grow">
         <Routes>
-          {/* Public Route */}
+          {/* Public */}
           <Route path="/auth" element={<AuthPage />} />
 
-          {/* Protected Routes */}
+          {/* Protected */}
           <Route 
             path="/admin" 
             element={
@@ -70,7 +73,18 @@ function AppContent() {
             } 
           />
 
-          {/* Default Redirect After Login */}
+        {/* ✅ CHAT ROUTE */}
+<Route
+  path="/chat"
+  element={
+    <ProtectedRoute allowedRoles={['MANAGER', 'DEALER']}>
+      <ChatPage />
+    </ProtectedRoute>
+  }
+
+/>
+
+          {/* Redirect */}
           <Route path="/" element={<RoleBasedRedirect />} />
 
           {/* Catch-all */}
@@ -83,15 +97,13 @@ function AppContent() {
   );
 }
 
-// Role-based Redirect Component
+// Redirect logic
 function RoleBasedRedirect() {
   const { user } = useAuth();
 
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
+  if (!user) return <Navigate to="/auth" replace />;
 
-  const role = user.role ? user.role.toUpperCase() : '';
+  const role = user.role?.toUpperCase();
 
   if (role === 'ADMIN') return <Navigate to="/admin" replace />;
   if (role === 'MANAGER') return <Navigate to="/manager" replace />;

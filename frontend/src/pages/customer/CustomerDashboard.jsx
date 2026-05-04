@@ -1,5 +1,4 @@
 // src/pages/customer/CustomerDashboard.jsx
-
 import React, { useState, useEffect } from 'react';
 import axios from '../../api/axios';
 import BatchCard from '../../components/common/BatchCard';
@@ -11,19 +10,26 @@ const CustomerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // ✅ Fetch ONLY approved batches (backend handles filtering)
   const fetchApprovedBatches = async () => {
     try {
       setLoading(true);
 
-      const response = await axios.get('/batches/approved/');
-      const data = Array.isArray(response.data) ? response.data : [];
+      const response = await axios.get('/batches/');
 
-      console.log("Approved batches:", data);
+      const data = Array.isArray(response.data)
+        ? response.data
+        : response.data?.results || [];
 
-      setApprovedBatches(data);
-      setDisplayedBatches(data);
+      console.log("ALL batches:", data);
 
+      const approved = data.filter(
+        (batch) => batch.status === 'APPROVED'
+      );
+
+      console.log("APPROVED only:", approved);
+
+      setApprovedBatches(approved);
+      setDisplayedBatches(approved);
     } catch (err) {
       console.error("Error fetching batches:", err);
       setError("Failed to load approved coffee batches.");
@@ -36,105 +42,81 @@ const CustomerDashboard = () => {
     fetchApprovedBatches();
   }, []);
 
-  // 🔍 Search functionality
   useEffect(() => {
-    if (!searchTerm) {
+    if (!searchTerm.trim()) {
       setDisplayedBatches(approvedBatches);
     } else {
       const term = searchTerm.toLowerCase();
-
-      const filtered = approvedBatches.filter(batch =>
-        (batch.id && batch.id.toString().toLowerCase().includes(term)) ||
-        (batch.origin && batch.origin.toLowerCase().includes(term)) ||
-        (batch.coffee_type && batch.coffee_type.toLowerCase().includes(term))
+      setDisplayedBatches(
+        approvedBatches.filter(
+          (b) =>
+            b.id?.toLowerCase().includes(term) ||
+            b.origin?.toLowerCase().includes(term) ||
+            b.coffee_type?.toLowerCase().includes(term)
+        )
       );
-
-      setDisplayedBatches(filtered);
     }
   }, [searchTerm, approvedBatches]);
 
-  // 🛒 Order handler (placeholder for now)
   const handleOrder = async (batch) => {
-  try {
-    const quantity = prompt("Enter quantity (kg):");
+    const quantity = prompt(
+      "Enter quantity (kg):",
+      batch.quantity_kg
+    );
 
     if (!quantity) return;
 
-    await axios.post('/orders/', {
-      batch: batch.id,
-      quantity_kg: parseFloat(quantity),
-      notes: ""
-    });
+    try {
+      await axios.post('/orders/', {
+        batch: batch.id,
+        quantity_kg: Number(quantity),
+        notes: ''
+      });
 
-    alert("✅ Order placed successfully!");
+      alert("Order placed successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to place order");
+    }
+  };
 
-  } catch (error) {
-    console.error(error);
-    alert("❌ Failed to place order");
-  }
-};
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-7xl mx-auto">
 
-        {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-gray-900">
-            ☕ Explore Coffee Batches
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Browse verified and approved coffee products
-          </p>
-        </div>
+        <h1 className="text-4xl font-bold text-center mb-10">
+          ☕ Approved Coffee Batches
+        </h1>
 
-        {/* Search */}
         <div className="max-w-2xl mx-auto mb-10">
           <input
-            type="text"
-            placeholder="Search by Batch ID, origin, or type..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-5 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:outline-none"
+            placeholder="Search batches..."
+            className="w-full p-3 border rounded-xl"
           />
         </div>
 
-        {/* Loading */}
-        {loading && (
-          <div className="text-center py-20 text-gray-500">
-            Loading approved batches...
-          </div>
-        )}
+        {loading && <p className="text-center">Loading...</p>}
+        {error && <p className="text-red-600 text-center">{error}</p>}
 
-        {/* Error */}
-        {error && (
-          <div className="text-center text-red-600 py-10">
-            {error}
-          </div>
-        )}
-
-        {/* Empty State */}
         {!loading && displayedBatches.length === 0 && (
-          <div className="text-center py-20 text-gray-500">
-            No approved batches found.
-          </div>
+          <p className="text-center text-gray-500">
+            No approved batches available
+          </p>
         )}
 
-        {/* Batch Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {displayedBatches.map((batch) => (
             <div key={batch.id} className="relative group">
-              
-              {/* Batch Card */}
               <BatchCard batch={batch} userRole="CUSTOMER" />
 
-              {/* Order Button */}
               <button
                 onClick={() => handleOrder(batch)}
-                className="absolute bottom-4 right-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow opacity-0 group-hover:opacity-100 transition"
+                className="absolute bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg opacity-0 group-hover:opacity-100"
               >
                 Order
               </button>
-
             </div>
           ))}
         </div>

@@ -79,7 +79,11 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response(OrderSerializer(order).data)
 
     # ✅ CUSTOMER ORDERS
-    @action(detail=False, methods=['get'])
-    def my_orders(self, request):
-        orders = Order.objects.filter(customer=request.user)
-        return Response(OrderSerializer(orders, many=True).data)
+@action(detail=False, methods=['get'])
+def incoming_orders(self, request):
+    user = request.user
+    if user.role != 'DEALER':
+        return Response([])
+
+    orders = Order.objects.filter(batch__dealer=user)
+    return Response(OrderSerializer(orders, many=True).data)

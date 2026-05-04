@@ -1,21 +1,39 @@
 // src/pages/manager/ManagerDashboard.jsx
+
 import React, { useState, useEffect } from 'react';
 import axios from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import BatchCard from '../../components/common/BatchCard';
+import { useNavigate } from 'react-router-dom'; // ✅ FIX
 
 const ManagerDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate(); // ✅ FIX
+
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('pending');
 
+  // =========================
+  // UPDATE BATCH (EDIT FIX)
+  // =========================
+  const updateBatch = async (batchId, data) => {
+    try {
+      await axios.patch(`/batches/${batchId}/`, data);
+      fetchBatches();
+    } catch (err) {
+      console.error("Update failed:", err);
+    }
+  };
+
+  // =========================
+  // FETCH BATCHES
+  // =========================
   const fetchBatches = async () => {
     try {
       setLoading(true);
 
       const response = await axios.get('/batches/');
-
       let data = response.data;
 
       if (data?.results) {
@@ -27,7 +45,6 @@ const ManagerDashboard = () => {
       }
 
       setBatches(data);
-
     } catch (error) {
       console.error("Failed to fetch batches:", error);
       setBatches([]);
@@ -40,6 +57,9 @@ const ManagerDashboard = () => {
     fetchBatches();
   }, []);
 
+  // =========================
+  // APPROVE / REJECT
+  // =========================
   const handleApprove = async (batchId) => {
     try {
       await axios.post(`/batches/${batchId}/approve/`);
@@ -58,7 +78,9 @@ const ManagerDashboard = () => {
     }
   };
 
-  // ✅ NORMALIZED FILTER (IMPORTANT FIX)
+  // =========================
+  // FILTER
+  // =========================
   const filteredBatches = batches.filter((batch) => {
     const status = batch.status?.toUpperCase();
 
@@ -69,16 +91,29 @@ const ManagerDashboard = () => {
     return true;
   });
 
-  // ✅ SAFE COUNTS (FIXED)
+  // =========================
+  // COUNTS
+  // =========================
   const countByStatus = (status) =>
     batches.filter(b => b.status?.toUpperCase() === status).length;
 
+  // =========================
+  // UI
+  // =========================
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-6">
 
         <h1 className="text-4xl font-bold mb-2">Manager Dashboard</h1>
-        <p className="text-gray-600 mb-8">Review coffee batches</p>
+        <p className="text-gray-600 mb-6">Review coffee batches</p>
+
+        {/* ✅ CHAT BUTTON FIXED */}
+        <button
+          onClick={() => navigate('/chat')}
+          className="bg-blue-600 text-white px-4 py-2 rounded mb-6"
+        >
+          Open Chat
+        </button>
 
         {/* TABS */}
         <div className="flex border-b mb-8">
@@ -97,7 +132,7 @@ const ManagerDashboard = () => {
           ))}
         </div>
 
-        {/* LOADING */}
+        {/* CONTENT */}
         {loading ? (
           <p>Loading...</p>
         ) : filteredBatches.length === 0 ? (
@@ -111,6 +146,7 @@ const ManagerDashboard = () => {
                 userRole="Manager"
                 onApprove={handleApprove}
                 onReject={handleReject}
+                onUpdate={updateBatch}   
               />
             ))}
           </div>

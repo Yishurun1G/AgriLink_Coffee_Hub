@@ -5,10 +5,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+# batches/views.py
+
+from rest_framework.exceptions import PermissionDenied
 
 from .models import Batch
 from .serializers import BatchSerializer, BatchCreateSerializer
 from .permissions import IsDealer, IsManager, IsOwnerOrManagerOrCustomer
+
 
 
 class BatchViewSet(viewsets.ModelViewSet):
@@ -42,6 +46,24 @@ class BatchViewSet(viewsets.ModelViewSet):
 
         return [permission() for permission in permission_classes]
 
+    
+    def get_queryset(self):
+     user = self.request.user
+
+    # 🔥 Customer ONLY sees approved batches
+     if user.role == 'CUSTOMER':
+        return Batch.objects.filter(status='APPROVED')
+
+    # 🔥 Dealer sees only their own batches
+     if user.role == 'DEALER':
+        return Batch.objects.filter(dealer=user)
+
+    # 🔥 Manager sees everything
+     if user.role in ['MANAGER', 'ADMIN']:
+        return Batch.objects.all()
+
+     return Batch.objects.none()
+       
     # 👤 Auto assign dealer
     def perform_create(self, serializer):
         serializer.save(dealer=self.request.user)
@@ -83,6 +105,7 @@ class BatchViewSet(viewsets.ModelViewSet):
             "message": "Batch rejected successfully",
             "data": BatchSerializer(batch).data
         })
+      
 
     # 📦 DEALER: My batches
     @action(detail=False, methods=['get'])
@@ -91,9 +114,9 @@ class BatchViewSet(viewsets.ModelViewSet):
         serializer = BatchSerializer(batches, many=True)
         return Response(serializer.data)
 
-    # 🌍 CUSTOMER: Approved batches (THIS FIXES YOUR PROBLEM)
+    # 🌍 CUSTOMER: Approved batches 
     @action(detail=False, methods=['get'])
-    def approved(self, request):
+    def approved_batches(self, request):
         batches = Batch.objects.filter(status='APPROVED')
         serializer = BatchSerializer(batches, many=True)
         return Response(serializer.data)
