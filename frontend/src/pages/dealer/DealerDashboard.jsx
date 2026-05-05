@@ -1,33 +1,23 @@
-// src/pages/dealer/DealerDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import axios from '../../api/axios';
 import CreateBatchForm from '../../components/batches/CreateBatchForm';
 import BatchCard from '../../components/common/BatchCard';
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
 
 const DealerDashboard = () => {
   const { user } = useAuth();
-  const navigate = useNavigate(); // ✅ FIXED
+  const navigate = useNavigate();
 
-  const [batches, setBatches] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [batches, setBatches]         = useState([]);
+  const [orders, setOrders]           = useState([]);
+  const [loading, setLoading]         = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  // =========================
-  // FETCH BATCHES
-  // =========================
   const fetchMyBatches = async () => {
     try {
-      const res = await axios.get('/batches/my_batches/');
-
-      console.log("BATCH RESPONSE:", res.data);
-
-      const data = Array.isArray(res.data)
-        ? res.data
-        : res.data.results || [];
-
+      const res  = await axios.get('/batches/my_batches/');
+      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
       setBatches(data);
     } catch (err) {
       console.error('Failed to fetch batches:', err);
@@ -35,19 +25,10 @@ const DealerDashboard = () => {
     }
   };
 
-  // =========================
-  // FETCH ORDERS
-  // =========================
   const fetchIncomingOrders = async () => {
     try {
-      const res = await axios.get('/orders/');
-
-      console.log("ORDER RESPONSE:", res.data);
-
-      const data = Array.isArray(res.data)
-        ? res.data
-        : res.data.results || [];
-
+      const res  = await axios.get('/orders/');
+      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
       setOrders(data);
     } catch (err) {
       console.error('Failed to fetch orders:', err);
@@ -55,16 +36,12 @@ const DealerDashboard = () => {
     }
   };
 
-  // =========================
-  // LOAD DATA
-  // =========================
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       await Promise.all([fetchMyBatches(), fetchIncomingOrders()]);
       setLoading(false);
     };
-
     load();
   }, []);
 
@@ -73,34 +50,34 @@ const DealerDashboard = () => {
     setShowCreateForm(false);
   };
 
-  // =========================
-  // UI
-  // =========================
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-6">
 
-        {/* ✅ CHAT BUTTON */}
-        <div className="mb-6">
+        {/* ── Quick-action buttons ── */}
+        <div className="mb-6 flex gap-3 flex-wrap">
           <button
             onClick={() => navigate('/chat')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl font-medium"
           >
             💬 Open Chat
           </button>
+          <button
+            onClick={() => navigate('/dealer/tracking')}
+            className="bg-amber-700 hover:bg-amber-800 text-white px-5 py-2 rounded-xl font-medium"
+          >
+            🚚 My Deliveries
+          </button>
         </div>
 
-        {/* HEADER */}
+        {/* ── Header ── */}
         <div className="flex justify-between items-center mb-10">
           <div>
             <h1 className="text-4xl font-bold text-gray-900">
               Welcome, {user?.first_name || user?.username || 'Dealer'}
             </h1>
-            <p className="text-gray-600 mt-1">
-              Manage your batches & incoming orders
-            </p>
+            <p className="text-gray-600 mt-1">Manage your batches & incoming orders</p>
           </div>
-
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
             className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-2xl"
@@ -109,14 +86,14 @@ const DealerDashboard = () => {
           </button>
         </div>
 
-        {/* CREATE FORM */}
+        {/* ── Create form ── */}
         {showCreateForm && (
           <div className="mb-10">
             <CreateBatchForm onBatchCreated={handleBatchCreated} />
           </div>
         )}
 
-        {/* ================= ORDERS ================= */}
+        {/* ── Orders ── */}
         <h2 className="text-2xl font-semibold mb-4">
           📦 Incoming Orders ({orders.length})
         </h2>
@@ -144,7 +121,7 @@ const DealerDashboard = () => {
           </div>
         )}
 
-        {/* ================= BATCHES ================= */}
+        {/* ── Batches ── */}
         <h2 className="text-2xl font-semibold mb-4">
           My Batches ({batches.length})
         </h2>
@@ -158,11 +135,7 @@ const DealerDashboard = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {batches.map(batch => (
-              <BatchCard
-                key={batch.id}
-                batch={batch}
-                userRole="Dealer"
-              />
+              <BatchCard key={batch.id} batch={batch} userRole="Dealer" />
             ))}
           </div>
         )}

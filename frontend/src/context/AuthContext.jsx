@@ -30,10 +30,11 @@ export const AuthProvider = ({ children }) => {
         try {
             const res = await api.get('/users/me/');
             setUser(res.data);
-            return res.data;           // ← Return the user data
+            return res.data;
         } catch (error) {
+            // Only clear tokens if it's truly a 401 that the interceptor
+            // couldn't recover from (interceptor already removed tokens in that case)
             console.error("Failed to fetch user:", error);
-            localStorage.removeItem('access_token');
             setUser(null);
             return null;
         } finally {

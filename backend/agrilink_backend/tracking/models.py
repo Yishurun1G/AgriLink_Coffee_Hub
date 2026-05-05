@@ -42,6 +42,12 @@ class DeliveryTracking(models.Model):
     estimated_delivery = models.DateTimeField(null=True, blank=True)
     delivery_notes = models.TextField(blank=True, null=True)
 
+    # Approval gates
+    # Manager must approve before dealer can move IN_TRANSIT → NEARBY
+    manager_approved_transit = models.BooleanField(default=False)
+    # Customer must approve before dealer can move NEARBY → DELIVERED
+    customer_approved_nearby = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

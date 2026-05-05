@@ -38,7 +38,7 @@ class BatchViewSet(viewsets.ModelViewSet):
         elif self.action in ['approve', 'reject']:
             permission_classes = [IsAuthenticated, IsManager]
 
-        elif self.action == 'approved':
+        elif self.action in ['approved', 'approved_batches']:
             permission_classes = [IsAuthenticated]  # Customers can access
 
         else:
@@ -114,7 +114,7 @@ class BatchViewSet(viewsets.ModelViewSet):
         serializer = BatchSerializer(batches, many=True)
         return Response(serializer.data)
 
-    # 🌍 CUSTOMER: Approved batches 
+    # 🌍 CUSTOMER: All approved batches — pagination disabled so all results are returned
     @action(detail=False, methods=['get'])
     def approved_batches(self, request):
         batches = Batch.objects.filter(status='APPROVED')

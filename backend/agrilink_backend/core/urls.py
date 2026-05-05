@@ -20,4 +20,6 @@ urlpatterns = [
     path('api/v1/', include('orders.urls')),
 
     path('api/v1/communication/', include('communication.urls')),
+
+    path('api/v1/tracking/', include('tracking.urls')),
 ]

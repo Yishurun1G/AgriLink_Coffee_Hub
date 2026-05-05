@@ -1,4 +1,3 @@
-// src/App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -13,8 +12,12 @@ import ManagerDashboard from './pages/manager/ManagerDashboard';
 import DealerDashboard from './pages/dealer/DealerDashboard';
 import CustomerDashboard from './pages/customer/CustomerDashboard';
 
-// ✅ IMPORT CHAT
+// Chat
 import ChatPage from './pages/chat/ChatPage';
+
+// Tracking
+import TrackingPage from './pages/customer/TrackingPage';
+import DealerLocationSharer from './components/tracking/DealerLocationSharer';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -31,60 +34,76 @@ function AppContent() {
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Navbar />
 
-      <main className="flex-grow">
+      <main className="flex-grow overflow-hidden flex flex-col">
         <Routes>
           {/* Public */}
           <Route path="/auth" element={<AuthPage />} />
 
-          {/* Protected */}
-          <Route 
-            path="/admin" 
+          {/* Protected — Dashboards */}
+          <Route
+            path="/admin"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <AdminDashboard />
               </ProtectedRoute>
-            } 
+            }
           />
-
-          <Route 
-            path="/manager" 
+          <Route
+            path="/manager"
             element={
               <ProtectedRoute allowedRoles={['MANAGER', 'ADMIN']}>
                 <ManagerDashboard />
               </ProtectedRoute>
-            } 
+            }
           />
-
-          <Route 
-            path="/dealer" 
+          <Route
+            path="/dealer"
             element={
               <ProtectedRoute allowedRoles={['DEALER']}>
                 <DealerDashboard />
               </ProtectedRoute>
-            } 
+            }
           />
-
-          <Route 
-            path="/customer" 
+          <Route
+            path="/customer"
             element={
               <ProtectedRoute allowedRoles={['CUSTOMER']}>
                 <CustomerDashboard />
               </ProtectedRoute>
-            } 
+            }
           />
 
-        {/* ✅ CHAT ROUTE */}
-<Route
-  path="/chat"
-  element={
-    <ProtectedRoute allowedRoles={['MANAGER', 'DEALER']}>
-      <ChatPage />
-    </ProtectedRoute>
-  }
+          {/* Chat */}
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute allowedRoles={['MANAGER', 'DEALER', 'ADMIN']}>
+                <ChatPage />
+              </ProtectedRoute>
+            }
+          />
 
-/>
+          {/* Tracking — Customer */}
+          <Route
+            path="/tracking"
+            element={
+              <ProtectedRoute allowedRoles={['CUSTOMER']}>
+                <TrackingPage />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Redirect */}
+          {/* Tracking — Dealer */}
+          <Route
+            path="/dealer/tracking"
+            element={
+              <ProtectedRoute allowedRoles={['DEALER']}>
+                <DealerLocationSharer />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Redirect root by role */}
           <Route path="/" element={<RoleBasedRedirect />} />
 
           {/* Catch-all */}
@@ -97,19 +116,14 @@ function AppContent() {
   );
 }
 
-// Redirect logic
 function RoleBasedRedirect() {
   const { user } = useAuth();
-
   if (!user) return <Navigate to="/auth" replace />;
-
   const role = user.role?.toUpperCase();
-
-  if (role === 'ADMIN') return <Navigate to="/admin" replace />;
-  if (role === 'MANAGER') return <Navigate to="/manager" replace />;
-  if (role === 'DEALER') return <Navigate to="/dealer" replace />;
+  if (role === 'ADMIN')    return <Navigate to="/admin"    replace />;
+  if (role === 'MANAGER')  return <Navigate to="/manager"  replace />;
+  if (role === 'DEALER')   return <Navigate to="/dealer"   replace />;
   if (role === 'CUSTOMER') return <Navigate to="/customer" replace />;
-
   return <Navigate to="/auth" replace />;
 }
 
