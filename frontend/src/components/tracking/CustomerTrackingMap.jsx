@@ -1,3 +1,14 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// CustomerTrackingMap
+//
+// A pure display component — it shows the map and order info only.
+// All confirm buttons live in TrackingPage; this component just renders
+// the dealer's live position and the customer's delivery address on a map.
+//
+// It receives one prop: orderId
+// It fetches the tracking record for that order and polls every 10 seconds
+// so the dealer's marker moves as they drive.
+// ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef } from 'react';
 import { getMyOrderTracking } from '../../api/trackingApi';
 
@@ -23,7 +34,9 @@ export default function CustomerTrackingMap({ orderId }) {
   const leafletMapRef   = useRef(null);
   const pollRef         = useRef(null);
 
-  // ── Fetch / poll tracking data ────────────────────────────────────────
+  // ── Fetch tracking data and keep it fresh ────────────────────────────────
+  // On mount: fetch once immediately, then repeat every 10 seconds.
+  // When the component unmounts the interval is cleared to avoid memory leaks.
   const fetchTracking = async () => {
     try {
       const data = await getMyOrderTracking(orderId);
@@ -42,7 +55,12 @@ export default function CustomerTrackingMap({ orderId }) {
     return () => clearInterval(pollRef.current);
   }, [orderId]);
 
-  // ── Build / update Leaflet map ────────────────────────────────────────
+  // ── Build or update the Leaflet map ─────────────────────────────────────
+  // Runs every time the tracking data changes.
+  // - If the map doesn't exist yet: load Leaflet from CDN, build the map,
+  //   place a truck marker for the dealer and a house marker for the destination,
+  //   and draw a dashed line between them.
+  // - If the map already exists: just move the truck marker to the new position.
   useEffect(() => {
     if (!tracking?.latitude || !tracking?.longitude) return;
 
