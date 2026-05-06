@@ -242,6 +242,8 @@ export default function BatchChat() {
   // then keep refreshing every 5 seconds to pick up new messages from the other person.
   // The interval is cleared when the user switches to a different thread.
   useEffect(() => {
+    clearInterval(pollRef.current);
+    if (!activeThread) return;
     fetchMessages(activeThread.id);
     pollRef.current = setInterval(() => fetchMessages(activeThread.id), 5000);
     return () => clearInterval(pollRef.current);
@@ -261,6 +263,7 @@ export default function BatchChat() {
   // Every time the messages list changes, scroll to the bottom
   // so the latest message is always visible (like any chat app).
   useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   // --- Send Message ---
@@ -574,7 +577,7 @@ export default function BatchChat() {
 // --- Styles ---
 // All inline styles are defined here at the bottom to keep the JSX clean.
 const styles = {
-  root: { display: 'flex', height: '100vh', fontFamily: "'DM Sans', sans-serif", background: '#FAF6F1', color: '#2d1a0e' },
+  root: { display: 'flex', flex: 1, height: '100%', fontFamily: "'DM Sans', sans-serif", background: '#FAF6F1', color: '#2d1a0e' },
   sidebar: { width: 300, minWidth: 260, borderRight: '1px solid #E8DDD4', display: 'flex', flexDirection: 'column', background: '#FDF9F5' },
   sidebarHeader: { padding: '20px 16px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E8DDD4' },
   sidebarTitle: { fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 600, color: '#3E1F00' },

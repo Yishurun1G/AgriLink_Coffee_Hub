@@ -21,6 +21,9 @@ class OrderSerializer(serializers.ModelSerializer):
             'quantity_kg',
             'status',
             'notes',
+            'delivery_address',
+            'delivery_lat',
+            'delivery_lng',
             'created_at',
             'updated_at',
         ]
@@ -34,7 +37,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     """Serializer for customer creating a new order"""
     class Meta:
         model = Order
-        fields = ['batch', 'quantity_kg', 'notes']
+        fields = ['batch', 'quantity_kg', 'notes', 'delivery_address', 'delivery_lat', 'delivery_lng']
 
     def create(self, validated_data):
         # Automatically set the customer to the logged-in user
