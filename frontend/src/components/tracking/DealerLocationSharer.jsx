@@ -1,3 +1,14 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// DealerLocationSharer
+//
+// The dealer's delivery management screen. It does three things:
+//   1. Shows a list of all deliveries assigned to this dealer.
+//   2. Lets the dealer tap "Mark as Picked Up" when they collect the order.
+//      That is the only status action the dealer takes — the customer
+//      confirms all the steps after that.
+//   3. Lets the dealer share their live GPS location so the customer can
+//      see the truck moving on the map.
+// ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef } from 'react';
 import { getDealerDeliveries, updateDealerLocation, markPickedUp } from '../../api/trackingApi';
 
@@ -37,13 +48,11 @@ export default function DealerLocationSharer() {
   const mapRef    = useRef(null);
   const markerRef = useRef(null);
 
-  useEffect(() => {
-    getDealerDeliveries()
-      .then((data) => setDeliveries(Array.isArray(data) ? data : []))
-      .finally(() => setLoading(false));
-  }, []);
+  // ── Load all deliveries assigned to this dealer on mount ────────────────
 
-  // ── Init Leaflet map ────────────────────────────────────────────────────
+  // ── Load Leaflet map library and build the map ────────────────────────────
+  // Leaflet is loaded from a CDN the first time a delivery is selected.
+  // The map shows the dealer's own position as a truck marker.
   useEffect(() => {
     if (mapReady || !active) return;
 
@@ -85,6 +94,10 @@ export default function DealerLocationSharer() {
   }, [myPosition]);
 
   // ── GPS sharing ─────────────────────────────────────────────────────────
+  // Uses the browser's Geolocation API to watch the dealer's position.
+  // Every time the position changes, it sends the new coordinates to the server
+  // so the customer's map updates in near real-time.
+  // startSharing begins watching; stopSharing cancels the watch.
   const startSharing = () => {
     if (!active || !navigator.geolocation) {
       setLocationError('Geolocation is not supported by your browser.');
@@ -117,6 +130,9 @@ export default function DealerLocationSharer() {
   useEffect(() => () => stopSharing(), []);
 
   // ── Mark picked up ──────────────────────────────────────────────────────
+  // Calls the backend to set status = PICKED_UP.
+  // Also auto-starts GPS sharing so the customer can immediately see
+  // the dealer's location on the map.
   const handleMarkPickedUp = async () => {
     if (!active || pickingUp) return;
     setPickingUp(true);

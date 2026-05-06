@@ -8,13 +8,17 @@ from orders.models import Order
 from .models import DeliveryTracking
 from .serializers import DeliveryTrackingSerializer, LocationUpdateSerializer
 
-# ── Delivery status flow ───────────────────────────────────────────────────
-# PENDING    → PICKED_UP   : Dealer marks picked up
-# PICKED_UP  → IN_TRANSIT  : Customer approves
-# IN_TRANSIT → NEARBY      : Customer approves
-# NEARBY     → DELIVERED   : Customer approves
+# ─────────────────────────────────────────────────────────────────────────────
+# Delivery status flow — who does what
 #
-# Manager only assigns the shipment (creates the tracking record).
+#   PENDING    → PICKED_UP   : Dealer taps "Mark as Picked Up"
+#   PICKED_UP  → IN_TRANSIT  : Customer confirms
+#   IN_TRANSIT → NEARBY      : Customer confirms
+#   NEARBY     → DELIVERED   : Customer confirms
+#
+# The manager only assigns the shipment (creates the tracking record).
+# After that, the dealer picks up and the customer drives everything forward.
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 class DeliveryTrackingViewSet(viewsets.ModelViewSet):
@@ -22,6 +26,10 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     http_method_names  = ['get', 'post', 'patch', 'head', 'options']
 
+    # ── Filter records by who is asking ──────────────────────────────────────
+    # Customers only see their own orders.
+    # Dealers only see deliveries assigned to them.
+    # Managers and admins see everything.
     def get_queryset(self):
         user = self.request.user
         role = user.role.upper()
@@ -37,7 +45,9 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
             'order__customer', 'order__batch', 'dealer'
         )
 
-    # ── Dealer: update GPS location ────────────────────────────────────────
+    # ── Dealer: send their current GPS coordinates ────────────────────────────
+    # Called every few seconds by the dealer's phone while they are on the road.
+    # Saves the lat/lng and records the time so the customer can see a "Live" badge.
     @action(detail=True, methods=['post'], url_path='update-location')
     def update_location(self, request, pk=None):
         tracking = self.get_object()
@@ -54,7 +64,9 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
         tracking.save(update_fields=['latitude', 'longitude', 'last_location_update'])
         return Response({'detail': 'Location updated.'})
 
-    # ── Dealer: mark as PICKED_UP (only status dealer can set) ────────────
+    # ── Dealer: mark the order as picked up ───────────────────────────────────
+    # This is the only status change the dealer makes.
+    # The order must be in PENDING state — you can't pick up something twice.
     @action(detail=True, methods=['post'], url_path='mark-picked-up')
     def mark_picked_up(self, request, pk=None):
         tracking = self.get_object()
@@ -69,9 +81,10 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
         tracking.save(update_fields=['status', 'updated_at'])
         return Response(DeliveryTrackingSerializer(tracking, context={'request': request}).data)
 
-    # ── Customer: advance status ───────────────────────────────────────────
-    # Customer drives the delivery forward after the dealer picks up.
-    # PICKED_UP → IN_TRANSIT → NEARBY → DELIVERED
+    # ── Customer: move the delivery to the next step ──────────────────────────
+    # The customer controls all steps after PICKED_UP.
+    # The allowed transitions are defined in the `transitions` dict below.
+    # When the customer confirms DELIVERED, the linked order is also marked delivered.
     @action(detail=True, methods=['post'], url_path='advance-status')
     def advance_status(self, request, pk=None):
         tracking = self.get_object()
@@ -80,6 +93,7 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
         if tracking.order.customer != request.user:
             return Response({'detail': 'This is not your order.'}, status=status.HTTP_403_FORBIDDEN)
 
+        # Map of current status → what it becomes when the customer confirms
         transitions = {
             'PICKED_UP':  'IN_TRANSIT',
             'IN_TRANSIT': 'NEARBY',
@@ -94,6 +108,8 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
             )
 
         tracking.status = next_status
+
+        # When the final step is confirmed, also close out the order itself
         if next_status == 'DELIVERED':
             tracking.order.status = 'DELIVERED'
             tracking.order.save(update_fields=['status'])
@@ -101,7 +117,9 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
         tracking.save(update_fields=['status', 'updated_at'])
         return Response(DeliveryTrackingSerializer(tracking, context={'request': request}).data)
 
-    # ── Manager/Admin: assign dealer to order ──────────────────────────────
+    # ── Manager: assign a dealer to an order ─────────────────────────────────
+    # Creates the tracking record and sets the order status to SHIPPED.
+    # After this point the manager's job is done — dealer and customer take over.
     @action(detail=False, methods=['post'], url_path='assign')
     def assign(self, request):
         if request.user.role.upper() not in ('MANAGER', 'ADMIN'):
@@ -131,7 +149,9 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED
         )
 
-    # ── Customer: get tracking for their specific order ────────────────────
+    # ── Customer: fetch tracking for one specific order ───────────────────────
+    # Used by the map component — the customer passes their order ID
+    # and gets back the full tracking record including the dealer's location.
     @action(detail=False, methods=['get'], url_path='my-order/(?P<order_id>[^/.]+)')
     def my_order(self, request, order_id=None):
         tracking = get_object_or_404(
