@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import axios from '../../api/axios';
 import BatchCard from '../../components/common/BatchCard';
 import { useNavigate } from 'react-router-dom';
-import { assignDelivery } from '../../api/trackingApi';
+import { assignDelivery, approveTransit } from '../../api/trackingApi';
 
 // ── Manager live tracking map ─────────────────────────────────────────────
 function ManagerTrackingView({ trackings }) {
@@ -148,9 +148,12 @@ const ManagerDashboard = () => {
 
   const fetchOrders = async () => {
     try {
+      console.log('Fetching orders for manager...');
       const res  = await axios.get('/orders/');
       const data = res.data?.results ?? res.data;
-      setOrders(Array.isArray(data) ? data : []);
+      const orders = Array.isArray(data) ? data : [];
+      console.log('Fetched orders:', orders);
+      setOrders(orders);
     } catch (err) {
       console.error('Failed to fetch orders:', err);
       setOrders([]);
@@ -188,6 +191,10 @@ const ManagerDashboard = () => {
       setLoading(false);
     };
     load();
+    
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // ── Batch actions ───────────────────────────────────────────────────────
@@ -265,14 +272,26 @@ const ManagerDashboard = () => {
         <div className="flex justify-between items-start mb-6 flex-wrap gap-3">
           <div>
             <h1 className="text-4xl font-bold text-gray-900">Manager Dashboard</h1>
-            <p className="text-gray-600 mt-1">Review batches & manage orders</p>
+            <p className="text-gray-600 mt-1">Review batches & manage orders • Auto-refreshes every 30s</p>
           </div>
-          <button
-            onClick={() => navigate('/chat')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl font-medium"
-          >
-            💬 Open Chat
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={async () => {
+                setLoading(true);
+                await Promise.all([fetchBatches(), fetchOrders(), fetchDealers(), fetchTrackings()]);
+                setLoading(false);
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl font-medium"
+            >
+              🔄 Refresh
+            </button>
+            <button
+              onClick={() => navigate('/chat')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl font-medium"
+            >
+              💬 Open Chat
+            </button>
+          </div>
         </div>
 
         {/* ── Tabs ── */}
@@ -298,11 +317,11 @@ const ManagerDashboard = () => {
 
         {/* ── Action needed banners ── */}
         {!loading && (() => {
-          const pendingApproval = trackings.filter(t => ['PICKED_UP','IN_TRANSIT'].includes(t.status) && !t.manager_approved_transit);
-          return pendingApproval.length > 0 ? (
+          const nearbyPending = trackings.filter(t => t.status === 'NEARBY' && !t.manager_approved_transit);
+          return nearbyPending.length > 0 ? (
             <div className="mb-4 bg-blue-50 border border-blue-300 rounded-xl px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
               <p className="text-blue-800 font-semibold text-sm">
-                � {pendingApproval.length} delivery{pendingApproval.length > 1 ? 'ies' : ''} waiting for your Nearby approval
+                📍 {nearbyPending.length} delivery{nearbyPending.length > 1 ? 'ies' : ''} reached Nearby — awaiting your approval
               </p>
               <button onClick={() => setActiveTab('tracking')} className="text-xs font-bold text-blue-700 underline">
                 Go to Tracking →
@@ -380,7 +399,7 @@ const ManagerDashboard = () => {
                   {(order.status === 'SHIPPED' || order.status === 'DELIVERED') && (() => {
                     // Match by string comparison to avoid int/string mismatch
                     const tracking = trackings.find(t => String(t.order_id) === String(order.id));
-                    const needsApproval = tracking && ['PICKED_UP', 'IN_TRANSIT'].includes(tracking.status) && !tracking.manager_approved_transit;
+                    const needsApproval = tracking && tracking.status === 'NEARBY' && !tracking.manager_approved_transit;
                     return (
                       <div className="mt-3 flex flex-col gap-2">
                         <div className="flex items-center gap-2 text-sm text-purple-700 bg-purple-50 px-3 py-2 rounded-lg w-fit flex-wrap">

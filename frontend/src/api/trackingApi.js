@@ -18,7 +18,10 @@ export const getMyOrderTracking = (orderId) =>
 
 // Fetch all tracking records that belong to the logged-in customer.
 export const getAllMyTrackings = () =>
-  api.get('tracking/').then((r) => r.data.results ?? r.data);
+  api.get('tracking/').then((r) => {
+    const d = r.data;
+    return Array.isArray(d) ? d : (d?.results ?? []);
+  });
 
 // Move the delivery to the next status step.
 // The backend decides what "next" means based on the current status:
@@ -31,7 +34,10 @@ export const advanceStatus = (trackingId) =>
 
 // Fetch all deliveries assigned to the logged-in dealer.
 export const getDealerDeliveries = () =>
-  api.get('tracking/').then((r) => r.data.results ?? r.data);
+  api.get('tracking/').then((r) => {
+    const d = r.data;
+    return Array.isArray(d) ? d : (d?.results ?? []);
+  });
 
 // Send the dealer's current GPS coordinates to the server.
 // Called every few seconds while the dealer has location sharing turned on.
@@ -54,3 +60,7 @@ export const assignDelivery = (orderId, dealerId, estimatedDelivery) =>
     dealer_id: dealerId,
     estimated_delivery: estimatedDelivery,
   }).then((r) => r.data);
+
+// Manager: approve the delivery as nearby, advancing status to NEARBY.
+export const approveTransit = (trackingId) =>
+  api.post(`tracking/${trackingId}/approve-transit/`).then((r) => r.data);

@@ -1,21 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getAllMyTrackings, advanceStatus } from '../../api/trackingApi';
-import CustomerTrackingMap from '../../components/tracking/CustomerTrackingMap';
 import api from '../../api/axios';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Status display config
-//
-// STEPS        — the ordered list of all 5 delivery stages
-// STEP_LABEL   — human-readable name for each stage
-// STEP_ICON    — emoji shown on the progress stepper
-// STEP_COLOR   — background/text/border colours for the status badge
-// ADVANCE_LABEL — the button text and description shown to the customer
-//                 when they need to confirm the next step.
-//                 Only PICKED_UP, IN_TRANSIT, and NEARBY have a button —
-//                 PENDING has no button (waiting for dealer) and
-//                 DELIVERED has no button (already done).
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Status config ─────────────────────────────────────────────────────────────
 const STEPS = ['PENDING', 'PICKED_UP', 'IN_TRANSIT', 'NEARBY', 'DELIVERED'];
 
 const STEP_LABEL = {
@@ -31,28 +18,42 @@ const STEP_ICON = {
 };
 
 const STEP_COLOR = {
-  PENDING:    { bg: '#f5f5f5', color: '#757575', border: '#e0e0e0' },
-  PICKED_UP:  { bg: '#e3f2fd', color: '#1565c0', border: '#90caf9' },
-  IN_TRANSIT: { bg: '#f3e5f5', color: '#6a1b9a', border: '#ce93d8' },
-  NEARBY:     { bg: '#fff3e0', color: '#e65100', border: '#ffcc80' },
-  DELIVERED:  { bg: '#e8f5e9', color: '#2e7d32', border: '#a5d6a7' },
+  PENDING:    { bg: '#f5f5f5',  color: '#757575', border: '#e0e0e0' },
+  PICKED_UP:  { bg: '#e3f2fd',  color: '#1565c0', border: '#90caf9' },
+  IN_TRANSIT: { bg: '#f3e5f5',  color: '#6a1b9a', border: '#ce93d8' },
+  NEARBY:     { bg: '#fff3e0',  color: '#e65100', border: '#ffcc80' },
+  DELIVERED:  { bg: '#e8f5e9',  color: '#2e7d32', border: '#a5d6a7' },
 };
 
+// Customer confirm buttons — all three transitions:
+//   PICKED_UP  → customer confirms → IN_TRANSIT
+//   IN_TRANSIT → customer confirms → NEARBY
+//   NEARBY     → customer confirms → DELIVERED
 const ADVANCE_LABEL = {
-  PICKED_UP:  { text: '🚚 Confirm In Transit',  desc: 'The dealer has picked up your order. Confirm to mark it in transit.' },
-  IN_TRANSIT: { text: '📍 Confirm Nearby',       desc: 'The dealer is on the way. Confirm when they are near your location.' },
-  NEARBY:     { text: '✅ Confirm Delivered',    desc: 'The dealer is nearby. Confirm once you have received your order.' },
+  PICKED_UP: {
+    text: '🚚 Confirm In Transit',
+    desc: 'The dealer has picked up your order. Tap to confirm it is now in transit.',
+    color: '#1565c0',
+    bg: '#e3f2fd',
+    border: '#90caf9',
+  },
+  IN_TRANSIT: {
+    text: '📍 Confirm Nearby',
+    desc: 'The dealer is on the way. Tap to confirm they are near your location.',
+    color: '#e65100',
+    bg: '#fff3e0',
+    border: '#ffcc80',
+  },
+  NEARBY: {
+    text: '✅ Confirm Delivered',
+    desc: 'The dealer is nearby. Tap once you have received your order.',
+    color: '#2e7d32',
+    bg: '#e8f5e9',
+    border: '#a5d6a7',
+  },
 };
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Stepper component
-//
-// Draws the horizontal row of circles (⏳ → 📦 → 🚚 → 📍 → ✅).
-// - Steps before the current one are filled brown with a checkmark.
-// - The current step has a white circle with a brown ring glow.
-// - Future steps are greyed out.
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Stepper ───────────────────────────────────────────────────────────────────
 function Stepper({ status }) {
   const currentIdx = STEPS.indexOf(status);
   return (
@@ -62,14 +63,12 @@ function Stepper({ status }) {
         const current = i === currentIdx;
         return (
           <div key={s} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 58, position: 'relative' }}>
-            {/* Connecting line between dots */}
             {i > 0 && (
               <div style={{
                 position: 'absolute', top: 16, right: '50%', width: '100%', height: 2,
                 background: i <= currentIdx ? '#6F4E37' : '#E0D0C0', zIndex: 0,
               }} />
             )}
-            {/* Circle dot */}
             <div style={{
               width: 32, height: 32, borderRadius: '50%', zIndex: 1,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -81,7 +80,6 @@ function Stepper({ status }) {
             }}>
               {done ? '✓' : STEP_ICON[s]}
             </div>
-            {/* Label below the dot */}
             <div style={{
               fontSize: 9, marginTop: 5, textAlign: 'center', lineHeight: 1.3,
               color: done || current ? '#6F4E37' : '#B8A090',
@@ -96,91 +94,212 @@ function Stepper({ status }) {
   );
 }
 
+// ── Inline live map (Leaflet, loaded from CDN) ────────────────────────────────
+// Renders inside the tracking card when the dealer has shared their location.
+// Polls every 10 s to move the truck marker as the dealer drives.
+function LiveMap({ tracking }) {
+  const mapRef    = useRef(null);
+  const markerRef = useRef(null);
+  const initRef   = useRef(false);
+  const pollRef   = useRef(null);
+  const [fresh, setFresh] = useState(tracking);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TrackingPage — main customer tracking screen
-//
-// What this page does:
-//   1. Loads all the customer's tracking records + all their orders on mount.
-//   2. Auto-refreshes every 15 seconds so the status stays up to date.
-//   3. Shows a card for each active delivery with a progress stepper.
-//   4. Shows a confirm button when the customer needs to approve the next step.
-//   5. Shows a separate section for orders that are SHIPPED but don't have a
-//      dealer assigned yet (no tracking record exists for them).
-//   6. Shows a live map below the cards when the dealer has shared their location.
-// ─────────────────────────────────────────────────────────────────────────────
+  // Poll for updated location every 10 s
+  useEffect(() => {
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await api.get(`tracking/${tracking.id}/`);
+        setFresh(res.data);
+      } catch { /* silent */ }
+    }, 10000);
+    return () => clearInterval(pollRef.current);
+  }, [tracking.id]);
+
+  // Build / update map
+  useEffect(() => {
+    if (!fresh?.latitude || !fresh?.longitude) return;
+    const lat = parseFloat(fresh.latitude);
+    const lng = parseFloat(fresh.longitude);
+
+    // Just move the marker if map already exists
+    if (initRef.current && markerRef.current && mapRef.current) {
+      markerRef.current.setLatLng([lat, lng]);
+      mapRef.current.panTo([lat, lng]);
+      return;
+    }
+
+    const build = (L) => {
+      if (initRef.current) return;
+      initRef.current = true;
+
+      const map = L.map(`live-map-${tracking.id}`).setView([lat, lng], 14);
+      mapRef.current = map;
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+      }).addTo(map);
+
+      // Dealer truck marker
+      const truckIcon = L.divIcon({
+        html: `<div style="background:#6F4E37;color:#fff;width:40px;height:40px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 12px rgba(111,78,55,0.4);border:3px solid #fff;"><span style="transform:rotate(45deg)">🚚</span></div>`,
+        className: '', iconSize: [40, 40], iconAnchor: [20, 40],
+      });
+      markerRef.current = L.marker([lat, lng], { icon: truckIcon })
+        .addTo(map)
+        .bindPopup(`<b>🚚 ${fresh.dealer_name}</b><br>Your delivery is on the way`);
+
+      // Destination marker
+      if (fresh.delivery_lat && fresh.delivery_lng) {
+        const dLat = parseFloat(fresh.delivery_lat);
+        const dLng = parseFloat(fresh.delivery_lng);
+        const homeIcon = L.divIcon({
+          html: `<div style="background:#e65100;color:#fff;width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 3px 10px rgba(230,81,0,0.4);border:2px solid #fff;"><span style="transform:rotate(45deg)">🏠</span></div>`,
+          className: '', iconSize: [36, 36], iconAnchor: [18, 36],
+        });
+        L.marker([dLat, dLng], { icon: homeIcon })
+          .addTo(map)
+          .bindPopup(`<b>📍 Your delivery address</b><br>${fresh.delivery_address || ''}`);
+        L.polyline([[lat, lng], [dLat, dLng]], {
+          color: '#6F4E37', weight: 2, dashArray: '6 8', opacity: 0.6,
+        }).addTo(map);
+        map.fitBounds([[lat, lng], [dLat, dLng]], { padding: [40, 40] });
+      }
+    };
+
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css'; link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+    if (window.L) { build(window.L); return; }
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => build(window.L);
+    document.head.appendChild(script);
+  }, [fresh]);
+
+  // Cleanup map on unmount
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        try { mapRef.current.remove(); } catch (_) {}
+        mapRef.current = null;
+        markerRef.current = null;
+        initRef.current = false;
+      }
+    };
+  }, []);
+
+  const isLive = fresh?.location_fresh;
+
+  return (
+    <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid #E8DDD4', marginTop: 4 }}>
+      <div id={`live-map-${tracking.id}`} style={{ height: 280, width: '100%' }} />
+      {isLive && (
+        <div style={{
+          position: 'absolute', top: 10, right: 10,
+          background: '#6F4E37', color: '#fff',
+          padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: 5,
+        }}>
+          <span style={{ animation: 'pulse 1.5s infinite', display: 'inline-block' }}>●</span>
+          Live
+        </div>
+      )}
+      {!fresh?.latitude && (
+        <div style={{
+          position: 'absolute', inset: 0, background: '#F5EFE8',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <p style={{ fontSize: 32 }}>🗺️</p>
+          <p style={{ color: '#9E7B5A', fontSize: 13, marginTop: 8 }}>Waiting for dealer to share location…</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── TrackingPage ──────────────────────────────────────────────────────────────
 export default function TrackingPage() {
   const [trackings, setTrackings]         = useState([]);
-  const [shippedOrders, setShippedOrders] = useState([]);  // SHIPPED orders with no tracking yet
-  const [selected, setSelected]           = useState(null); // order_id whose map is open
+  const [shippedOrders, setShippedOrders] = useState([]);
   const [loading, setLoading]             = useState(true);
-  const [advancing, setAdvancing]         = useState(null); // tracking.id currently being confirmed
-  const [advanceMsg, setAdvanceMsg]       = useState({});   // error messages keyed by tracking.id
+  const [advancing, setAdvancing]         = useState(null);
+  const [advanceMsg, setAdvanceMsg]       = useState({});
+  const [mapOpen, setMapOpen]             = useState({});  // trackingId → bool
 
-  // ── Load data from the server ─────────────────────────────────────────────
-  // Fetches both tracking records and orders in parallel.
-  // Orders that are SHIPPED but have no tracking record are shown separately
-  // so the customer knows their order is on its way but no dealer is assigned yet.
   const load = useCallback(async () => {
     try {
-      const [trackingRes, orderRes] = await Promise.all([
-        getAllMyTrackings().catch(() => []),
-        api.get('/orders/?page_size=100').then((r) => {
+      // Fetch orders and trackings in parallel
+      const [orderRes, trackingRes] = await Promise.all([
+        api.get('orders/?page_size=100').then((r) => {
           const d = r.data?.results ?? r.data;
           return Array.isArray(d) ? d : [];
         }).catch(() => []),
+        getAllMyTrackings().catch(() => []),
       ]);
 
-      const allTrackings = Array.isArray(trackingRes) ? trackingRes : [];
       const allOrders    = Array.isArray(orderRes)    ? orderRes    : [];
+      const allTrackings = Array.isArray(trackingRes) ? trackingRes : [];
 
+      // Build a map of order_id → tracking record for quick lookup
+      const trackingByOrderId = {};
+      allTrackings.forEach((t) => { trackingByOrderId[String(t.order_id)] = t; });
+
+      // Active tracking cards: any order that has a tracking record
       setTrackings(allTrackings);
 
-      // Find SHIPPED orders that don't have a tracking record yet
-      const trackedIds = new Set(allTrackings.map((t) => String(t.order_id)));
+      // "Awaiting dealer" section: SHIPPED orders with NO tracking record yet
       setShippedOrders(
         allOrders.filter((o) =>
-          o.status?.toUpperCase() === 'SHIPPED' && !trackedIds.has(String(o.id))
+          o.status?.toUpperCase() === 'SHIPPED' &&
+          !trackingByOrderId[String(o.id)]
         )
       );
-
-      // Auto-select the first tracking on first load (opens its map by default)
-      setSelected((prev) => prev ?? (allTrackings[0]?.order_id ?? null));
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // ── Auto-refresh every 15 seconds ────────────────────────────────────────
   useEffect(() => {
     load();
     const interval = setInterval(load, 15000);
-    return () => clearInterval(interval); // clean up when the page unmounts
+    return () => clearInterval(interval);
   }, [load]);
 
-  // ── Handle the customer's confirm button ──────────────────────────────────
-  // Calls the backend advance-status endpoint, then updates the local state
-  // immediately so the UI reflects the new status without waiting for the
-  // next auto-refresh.
   const handleAdvance = async (trackingId) => {
     setAdvancing(trackingId);
     setAdvanceMsg((p) => ({ ...p, [trackingId]: '' }));
     try {
+      console.log('Calling advanceStatus for tracking:', trackingId);
       const updated = await advanceStatus(trackingId);
-      setTrackings((prev) => prev.map((t) => t.id === trackingId ? { ...t, ...updated } : t));
+      console.log('Received updated tracking:', updated);
+      // Update the tracking record with the new status
+      setTrackings((prev) => {
+        const newTrackings = prev.map((t) => t.id === trackingId ? { ...t, ...updated } : t);
+        console.log('Updated trackings state:', newTrackings);
+        return newTrackings;
+      });
+      // Clear any error messages
+      setAdvanceMsg((p) => ({ ...p, [trackingId]: '' }));
     } catch (err) {
+      console.error('Advance status error:', err);
+      console.error('Error response:', err?.response?.data);
+      const errorMsg = err?.response?.data?.detail ?? err?.message ?? 'Failed to update status.';
       setAdvanceMsg((p) => ({
         ...p,
-        [trackingId]: err?.response?.data?.detail ?? 'Failed to update status.',
+        [trackingId]: errorMsg,
       }));
     } finally {
-      setAdvancing(false);
+      setAdvancing(null);
     }
   };
 
+  const toggleMap = (id) => setMapOpen((p) => ({ ...p, [id]: !p[id] }));
+
   const isEmpty = trackings.length === 0 && shippedOrders.length === 0;
 
-  // ── Loading spinner ───────────────────────────────────────────────────────
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
       <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
@@ -188,13 +307,22 @@ export default function TrackingPage() {
     </div>
   );
 
+  const sorted = [...trackings].sort((a, b) => {
+    if (a.status === 'DELIVERED' && b.status !== 'DELIVERED') return 1;
+    if (a.status !== 'DELIVERED' && b.status === 'DELIVERED') return -1;
+    return 0;
+  });
+
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#FAF6F1', minHeight: '100vh' }}>
-      <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
+      <style>{`
+        @keyframes spin  { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+      `}</style>
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 20px' }}>
 
-        {/* ── Page header with manual refresh button ── */}
+        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, color: '#3E1F00', margin: 0 }}>
@@ -212,164 +340,149 @@ export default function TrackingPage() {
           </button>
         </div>
 
-        {/* ── Empty state — no shipments at all ── */}
+        {/* Empty state */}
         {isEmpty ? (
           <div style={{ textAlign: 'center', padding: 80 }}>
             <p style={{ fontSize: 48 }}>🚚</p>
-            <p style={{ fontSize: 18, color: '#5C3D1E', marginTop: 12 }}>No active shipments</p>
-            <p style={{ color: '#9E7B5A', marginTop: 6 }}>
-              Your orders will appear here once a manager ships them.
-            </p>
+            <p style={{ fontSize: 18, color: '#5C3D1E', marginTop: 12 }}>No shipments yet</p>
+            <p style={{ color: '#9E7B5A', marginTop: 6 }}>Your shipped orders will appear here once a manager processes them.</p>
           </div>
         ) : (
           <>
-            {/* ── Section 1: Active tracked deliveries ─────────────────────────
-                Each card shows:
-                  - order number + status badge
-                  - dealer name, quantity, delivery address
-                  - a progress stepper showing all 5 stages
-                  - a confirm button if the customer needs to act
-                  - a "View Map" button if the dealer has shared their location
-            ─────────────────────────────────────────────────────────────────── */}
-            {trackings.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
-                {trackings.map((t) => {
-                  const sc          = STEP_COLOR[t.status] ?? STEP_COLOR.PENDING;
-                  const isSelected  = String(selected) === String(t.order_id);
-                  const isAdvancing = advancing === t.id;
-                  const msg         = advanceMsg[t.id];
-                  // advance is null for PENDING and DELIVERED — no button needed
-                  const advance     = ADVANCE_LABEL[t.status];
+            {/* ── Active tracking cards ── */}
+            {sorted.filter(t => t.status !== 'DELIVERED').length > 0 && (
+              <div style={{ marginBottom: 32 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#6F4E37', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                  🚚 Active Shipments ({sorted.filter(t => t.status !== 'DELIVERED').length})
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {sorted.filter(t => t.status !== 'DELIVERED').map((t) => {
+                    const sc          = STEP_COLOR[t.status] ?? STEP_COLOR.PENDING;
+                    const isAdvancing = advancing === t.id;
+                    const msg         = advanceMsg[t.id];
+                    const advance     = ADVANCE_LABEL[t.status];
+                    const hasLocation = !!(t.latitude && t.longitude);
+                    const showMap     = mapOpen[t.id];
 
-                  return (
-                    <div
-                      key={t.id}
-                      style={{
-                        background: '#fff',
-                        borderRadius: 16,
-                        // Highlight the card border when the customer needs to act
-                        border: `2px solid ${advance ? '#6F4E37' : isSelected ? '#6F4E37' : '#E8DDD4'}`,
+                    return (
+                      <div key={t.id} style={{
+                        background: '#fff', borderRadius: 16,
+                        border: `2px solid ${advance ? advance.border : '#E8DDD4'}`,
                         padding: '18px 20px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 14,
-                        boxShadow: advance ? '0 2px 16px rgba(111,78,55,0.10)' : 'none',
-                      }}
-                    >
-                      {/* Order number, status badge, dealer info */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 5 }}>
-                            <span style={{ fontWeight: 700, fontSize: 15, color: '#2d1a0e' }}>
-                              Order #{t.order_id}
-                            </span>
-                            <span style={{
-                              padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600,
-                              background: sc.bg, color: sc.color, border: `1px solid ${sc.border}`,
-                            }}>
-                              {STEP_ICON[t.status]} {STEP_LABEL[t.status]}
-                            </span>
+                        display: 'flex', flexDirection: 'column', gap: 14,
+                        boxShadow: advance ? `0 2px 16px ${advance.border}` : 'none',
+                      }}>
+
+                        {/* Top row: order info + map button */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 5 }}>
+                              <span style={{ fontWeight: 700, fontSize: 15, color: '#2d1a0e' }}>Order #{t.order_id}</span>
+                              <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600, background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
+                                {STEP_ICON[t.status]} {STEP_LABEL[t.status]}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: 13, color: '#9E7B5A', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                              <span>🚚 {t.dealer_name}</span>
+                              <span>📦 {t.quantity_kg} kg</span>
+                              {t.delivery_address && <span>📍 {t.delivery_address}</span>}
+                            </div>
                           </div>
-                          <div style={{ fontSize: 13, color: '#9E7B5A', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                            <span>🚚 {t.dealer_name}</span>
-                            <span>📦 {t.quantity_kg} kg</span>
-                            {t.delivery_address && <span>📍 {t.delivery_address}</span>}
-                          </div>
-                        </div>
 
-                        {/* Map toggle button — only shown when dealer has a location */}
-                        {t.latitude && t.longitude && t.status !== 'DELIVERED' && (
-                          <button
-                            onClick={() => setSelected(isSelected ? null : t.order_id)}
-                            style={{
-                              padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-                              background: isSelected ? '#6F4E37' : '#fff',
-                              color: isSelected ? '#fff' : '#6F4E37',
-                              border: '2px solid #6F4E37', cursor: 'pointer', whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {isSelected ? '📍 Tracking' : '🗺 View Map'}
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Progress stepper */}
-                      <Stepper status={t.status} />
-
-                      {/* ── Confirm button (only shown when customer needs to act) ── */}
-                      {advance && (
-                        <div style={{
-                          background: '#FAF6F1', border: '1.5px solid #D4C0A8',
-                          borderRadius: 12, padding: '14px 16px',
-                        }}>
-                          <p style={{ fontSize: 13, color: '#6F4E37', marginBottom: 10 }}>
-                            {advance.desc}
-                          </p>
-                          <button
-                            onClick={() => handleAdvance(t.id)}
-                            disabled={isAdvancing}
-                            style={{
-                              padding: '10px 24px', borderRadius: 10, fontSize: 14, fontWeight: 700,
-                              background: '#6F4E37', color: '#fff', border: 'none',
-                              cursor: isAdvancing ? 'not-allowed' : 'pointer',
-                              opacity: isAdvancing ? 0.6 : 1,
-                            }}
-                          >
-                            {isAdvancing ? 'Updating…' : advance.text}
-                          </button>
-                          {msg && (
-                            <p style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: '#c0392b' }}>
-                              {msg}
-                            </p>
+                          {/* Show map button whenever dealer has location */}
+                          {hasLocation && (
+                            <button
+                              onClick={() => toggleMap(t.id)}
+                              style={{
+                                padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                                background: showMap ? '#6F4E37' : '#fff',
+                                color: showMap ? '#fff' : '#6F4E37',
+                                border: '2px solid #6F4E37', cursor: 'pointer', whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {showMap ? '📍 Hide Map' : '🗺 View Map'}
+                            </button>
                           )}
                         </div>
-                      )}
 
-                      {/* Delivered — show a completion banner instead of a button */}
-                      {t.status === 'DELIVERED' && (
-                        <div style={{ background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
-                          <p style={{ fontSize: 14, fontWeight: 700, color: '#2e7d32' }}>
-                            ✅ Delivery complete! Thank you for your order.
-                          </p>
-                        </div>
-                      )}
+                        {/* Progress stepper */}
+                        <Stepper status={t.status} />
 
-                      {/* Pending — show an info message, no button */}
-                      {t.status === 'PENDING' && (
-                        <div style={{ background: '#f5f5f5', border: '1px solid #e0e0e0', borderRadius: 10, padding: '10px 14px' }}>
-                          <p style={{ fontSize: 13, color: '#757575', fontWeight: 600 }}>
-                            ⏳ Waiting for the dealer to pick up your order.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        {/* PENDING info */}
+                        {t.status === 'PENDING' && (
+                          <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '10px 14px' }}>
+                            <p style={{ fontSize: 13, color: '#f57f17', fontWeight: 600 }}>
+                              ⏳ A dealer has been assigned and will pick up your order soon.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Customer confirm button — PICKED_UP, IN_TRANSIT, NEARBY */}
+                        {advance && (
+                          <div style={{
+                            background: advance.bg,
+                            border: `2px solid ${advance.border}`,
+                            borderRadius: 12, padding: '14px 16px',
+                          }}>
+                            <p style={{ fontSize: 13, color: advance.color, marginBottom: 10, fontWeight: 500 }}>{advance.desc}</p>
+                            <button
+                              onClick={() => handleAdvance(t.id)}
+                              disabled={isAdvancing}
+                              style={{
+                                padding: '11px 28px', borderRadius: 10, fontSize: 14, fontWeight: 700,
+                                background: advance.color, color: '#fff', border: 'none',
+                                cursor: isAdvancing ? 'not-allowed' : 'pointer',
+                                opacity: isAdvancing ? 0.6 : 1,
+                                boxShadow: `0 2px 8px ${advance.border}`,
+                              }}
+                            >
+                              {isAdvancing ? 'Updating…' : advance.text}
+                            </button>
+                            {msg && (
+                              <p style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: msg.startsWith('✅') ? '#2e7d32' : '#c0392b' }}>
+                                {msg}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Live map — inline inside the card */}
+                        {showMap && hasLocation && (
+                          <LiveMap tracking={t} />
+                        )}
+
+                        {/* No location yet but dealer is active — show placeholder */}
+                        {!hasLocation && ['PICKED_UP', 'IN_TRANSIT', 'NEARBY'].includes(t.status) && (
+                          <div style={{ background: '#F5EFE8', borderRadius: 12, padding: '16px', textAlign: 'center', border: '1px dashed #D4C0A8' }}>
+                            <p style={{ fontSize: 28 }}>🗺️</p>
+                            <p style={{ fontSize: 13, color: '#9E7B5A', marginTop: 6 }}>Waiting for dealer to share their location…</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
-            {/* ── Section 2: SHIPPED orders with no dealer assigned yet ─────────
-                These are orders the manager has marked as shipped but hasn't
-                assigned a dealer to yet. No tracking record exists for them,
-                so we just show basic order info and a "no dealer yet" note.
-            ─────────────────────────────────────────────────────────────────── */}
+            {/* ── SHIPPED orders with no dealer yet ── */}
             {shippedOrders.length > 0 && (
               <>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#9E7B5A', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-                  Awaiting Dealer Assignment
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#e65100', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                  🚚 Shipped — Awaiting Dealer Assignment ({shippedOrders.length})
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
                   {shippedOrders.map((o) => (
                     <div key={o.id} style={{
-                      background: '#fff', borderRadius: 14, border: '1px solid #E8DDD4',
+                      background: '#fff', borderRadius: 14, border: '2px solid #ffcc80',
                       padding: '14px 18px', display: 'flex', justifyContent: 'space-between',
                       alignItems: 'center', flexWrap: 'wrap', gap: 10,
                     }}>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 14, color: '#2d1a0e', marginBottom: 4 }}>
                           Order #{o.id}
-                          <span style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: '#f5f5f5', color: '#757575', border: '1px solid #e0e0e0' }}>
-                            ⏳ Pending
+                          <span style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: '#fff3e0', color: '#e65100', border: '1px solid #ffcc80' }}>
+                            🚚 Shipped
                           </span>
                         </div>
                         <div style={{ fontSize: 12, color: '#9E7B5A', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -378,24 +491,47 @@ export default function TrackingPage() {
                           {o.delivery_address && <span>📍 {o.delivery_address}</span>}
                         </div>
                       </div>
-                      <span style={{ fontSize: 12, color: '#B8A090', fontStyle: 'italic' }}>
-                        No dealer assigned yet
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                        <span style={{ fontSize: 12, color: '#B8A090', fontStyle: 'italic' }}>Waiting for dealer assignment</span>
+                        <span style={{ fontSize: 11, color: '#e65100' }}>⏳ A manager will assign a dealer soon</span>
+                      </div>
                     </div>
                   ))}
                 </div>
               </>
             )}
 
-            {/* ── Section 3: Live map ───────────────────────────────────────────
-                Only shown when the customer has clicked "View Map" on a card
-                AND the dealer for that order has shared their GPS location.
-                The map component polls the server every 10 seconds on its own.
-            ─────────────────────────────────────────────────────────────────── */}
-            {selected && trackings.some((t) => String(t.order_id) === String(selected) && t.latitude) && (
-              <div style={{ borderRadius: 16, overflow: 'hidden', border: '1px solid #E8DDD4', marginTop: 8 }}>
-                <CustomerTrackingMap orderId={selected} />
-              </div>
+            {/* ── Delivered history ── */}
+            {sorted.filter(t => t.status === 'DELIVERED').length > 0 && (
+              <>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#2e7d32', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                  ✅ Delivered ({sorted.filter(t => t.status === 'DELIVERED').length})
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+                  {sorted.filter(t => t.status === 'DELIVERED').map((t) => (
+                    <div key={t.id} style={{
+                      background: '#fff', borderRadius: 14, border: '1px solid #a5d6a7',
+                      padding: '14px 18px', display: 'flex', justifyContent: 'space-between',
+                      alignItems: 'center', flexWrap: 'wrap', gap: 10,
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: '#2d1a0e', marginBottom: 4 }}>
+                          Order #{t.order_id}
+                          <span style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: '#e8f5e9', color: '#2e7d32', border: '1px solid #a5d6a7' }}>
+                            ✅ Delivered
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#9E7B5A', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                          <span>🚚 {t.dealer_name}</span>
+                          <span>📦 {t.quantity_kg} kg</span>
+                          {t.delivery_address && <span>📍 {t.delivery_address}</span>}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 12, color: '#2e7d32', fontWeight: 600 }}>Delivery complete</span>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </>
         )}

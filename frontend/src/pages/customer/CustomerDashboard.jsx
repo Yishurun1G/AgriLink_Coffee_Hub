@@ -128,17 +128,31 @@ function OrderModal({ batch, onClose, onSuccess }) {
     }
     setSubmitting(true); setError('');
     try {
+      console.log('Submitting order with data:', {
+        batch: batch.id,
+        quantity_kg: Number(quantity),
+        notes,
+        delivery_address: address,
+        delivery_lat: Number(pinLat).toFixed(6),
+        delivery_lng: Number(pinLng).toFixed(6),
+      });
       await axios.post('/orders/', {
         batch: batch.id,
         quantity_kg: Number(quantity),
         notes,
         delivery_address: address,
-        delivery_lat: pinLat,
-        delivery_lng: pinLng,
+        delivery_lat: Number(pinLat).toFixed(6),
+        delivery_lng: Number(pinLng).toFixed(6),
       });
       onSuccess();
     } catch (err) {
-      setError(err?.response?.data?.detail ?? 'Failed to place order. Try again.');
+      console.error('Order creation error:', err);
+      console.error('Error response:', err?.response?.data);
+      const errorMsg = err?.response?.data?.detail ?? 
+                      (err?.response?.data ? JSON.stringify(err.response.data) : null) ??
+                      err?.message ?? 
+                      'Failed to place order. Try again.';
+      setError(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -264,6 +278,45 @@ const modal = {
   btn:     { background: '#6F4E37', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
 };
 
+// ── Track Button with live shipment count ────────────────────────────────
+function TrackButton({ navigate }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    // Count both active tracking records AND shipped orders awaiting dealer
+    Promise.all([
+      axios.get('/tracking/').then((r) => {
+        const data = Array.isArray(r.data) ? r.data : r.data?.results ?? [];
+        return data.filter((t) => t.status !== 'DELIVERED');
+      }).catch(() => []),
+      axios.get('/orders/?page_size=100').then((r) => {
+        const data = Array.isArray(r.data) ? r.data : r.data?.results ?? [];
+        return data.filter((o) => o.status?.toUpperCase() === 'SHIPPED');
+      }).catch(() => []),
+    ]).then(([activeTrackings, shippedOrders]) => {
+      // Avoid double-counting: shipped orders that already have a tracking record
+      // are already in activeTrackings, so just take the max
+      const trackedOrderIds = new Set(activeTrackings.map((t) => String(t.order_id)));
+      const untracked = shippedOrders.filter((o) => !trackedOrderIds.has(String(o.id)));
+      setCount(activeTrackings.length + untracked.length);
+    });
+  }, []);
+
+  return (
+    <button
+      onClick={() => navigate('/tracking')}
+      className="relative bg-amber-700 hover:bg-amber-800 text-white px-5 py-2 rounded-xl font-medium flex items-center gap-2"
+    >
+      📍 Track My Orders
+      {count > 0 && (
+        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
 // ── Main CustomerDashboard ────────────────────────────────────────────────
 const CustomerDashboard = () => {
   const navigate = useNavigate();
@@ -312,12 +365,7 @@ const CustomerDashboard = () => {
       <div className="max-w-7xl mx-auto">
 
         <div className="flex justify-end mb-6">
-          <button
-            onClick={() => navigate('/tracking')}
-            className="bg-amber-700 hover:bg-amber-800 text-white px-5 py-2 rounded-xl font-medium flex items-center gap-2"
-          >
-            📍 Track My Orders
-          </button>
+          <TrackButton navigate={navigate} />
         </div>
 
         <h1 className="text-4xl font-bold text-center mb-10">☕ Approved Coffee Batches</h1>

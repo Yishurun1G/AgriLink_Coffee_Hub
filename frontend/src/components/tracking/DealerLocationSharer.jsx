@@ -49,29 +49,44 @@ export default function DealerLocationSharer() {
   const markerRef = useRef(null);
 
   // ── Load all deliveries assigned to this dealer on mount ────────────────
+  useEffect(() => {
+    getDealerDeliveries()
+      .then((data) => setDeliveries(Array.isArray(data) ? data : []))
+      .catch(() => setDeliveries([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   // ── Load Leaflet map library and build the map ────────────────────────────
-  // Leaflet is loaded from a CDN the first time a delivery is selected.
-  // The map shows the dealer's own position as a truck marker.
+  // Only initialise the map when the active delivery needs it (not PENDING/DELIVERED).
+  // The #dealer-map div must already be in the DOM before Leaflet touches it.
+  const needsMap = active && active.status !== 'PENDING' && active.status !== 'DELIVERED';
+
   useEffect(() => {
-    if (mapReady || !active) return;
+    if (!needsMap || mapReady) return;
 
-    if (!document.getElementById('leaflet-css')) {
-      const link = document.createElement('link');
-      link.id = 'leaflet-css'; link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-    }
+    // Small delay so React has flushed the DOM and #dealer-map exists
+    const timer = setTimeout(() => {
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css'; link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+      }
 
-    if (window.L) { initMap(window.L); return; }
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => initMap(window.L);
-    document.head.appendChild(script);
-  }, [active]);
+      if (window.L) { initMap(window.L); return; }
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = () => initMap(window.L);
+      document.head.appendChild(script);
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [needsMap, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const initMap = (L) => {
     if (mapRef.current) return;
+    const container = document.getElementById('dealer-map');
+    if (!container) return; // guard: DOM not ready yet
     const map = L.map('dealer-map').setView([9.0, 38.7], 13);
     mapRef.current = map;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -151,17 +166,19 @@ export default function DealerLocationSharer() {
   };
 
   const handleSelectDelivery = (d) => {
+    // Stop sharing and tear down the old map first
     stopSharing();
-    setActive(d);
+    if (mapRef.current) {
+      try { mapRef.current.remove(); } catch (_) {}
+      mapRef.current = null;
+      markerRef.current = null;
+    }
+    setMapReady(false);
     setLastSent(null);
     setMyPosition(null);
     setPickupError('');
-    if (mapRef.current) {
-      mapRef.current.remove();
-      mapRef.current = null;
-      markerRef.current = null;
-      setMapReady(false);
-    }
+    // Set active last so the new panel renders with a clean slate
+    setActive(d);
   };
 
   if (loading) return (
