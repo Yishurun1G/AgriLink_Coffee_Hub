@@ -22,4 +22,7 @@ urlpatterns = [
     path('api/v1/communication/', include('communication.urls')),
 
     path('api/v1/tracking/', include('tracking.urls')),
+    
+    # Reports App
+    path('api/v1/reports/', include('reports.urls')),
 ]

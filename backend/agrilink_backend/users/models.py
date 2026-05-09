@@ -16,6 +16,7 @@ class User(AbstractUser):
     )
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     location = models.CharField(max_length=100, blank=True, null=True)
+    is_active = models.BooleanField(default=True)  # For suspend/activate functionality
 
     def __str__(self):
         return f"{self.username} - {self.role}"
@@ -28,3 +29,7 @@ class User(AbstractUser):
     @property
     def is_manager(self):
         return self.role == self.Role.MANAGER
+    
+    @property
+    def is_admin(self):
+        return self.role == self.Role.ADMIN

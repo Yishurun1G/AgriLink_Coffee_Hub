@@ -288,6 +288,12 @@ const ManagerDashboard = () => {
               🔄 Refresh
             </button>
             <button
+              onClick={() => navigate('/manager/reports')}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-xl font-medium"
+            >
+              📊 Reports
+            </button>
+            <button
               onClick={() => navigate('/chat')}
               className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl font-medium"
             >

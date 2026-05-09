@@ -1,16 +1,27 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
 import AuthPage from './pages/AuthPage';
+import LandingPage from './pages/LandingPage';
 
 // Dashboards
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 import DealerDashboard from './pages/dealer/DealerDashboard';
 import CustomerDashboard from './pages/customer/CustomerDashboard';
+
+// Admin Pages
+import UserManagement from './pages/admin/UserManagement';
+import BatchManagement from './pages/admin/BatchManagement';
+import OrderManagement from './pages/admin/OrderManagement';
+import Reports from './pages/admin/Reports';
+import ActivityLogs from './pages/admin/ActivityLogs';
+
+// Manager Pages
+import ReportsPage from './pages/manager/ReportsPage';
 
 // Chat
 import ChatPage from './pages/chat/ChatPage';
@@ -21,6 +32,8 @@ import DealerLocationSharer from './components/tracking/DealerLocationSharer';
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const location = useLocation();
+  const isLandingPage = location.pathname === '/' && !user;
 
   if (loading) {
     return (
@@ -32,14 +45,17 @@ function AppContent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Navbar />
+      {!isLandingPage && <Navbar />}
 
       <main className="flex-grow overflow-hidden flex flex-col">
         <Routes>
           {/* Public */}
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/register" element={<AuthPage />} />
+          <Route path="/landing" element={<LandingPage />} />  {/* Direct access to landing page */}
 
-          {/* Protected — Dashboards */}
+          {/* Protected — Admin Dashboard & Pages */}
           <Route
             path="/admin"
             element={
@@ -49,10 +65,60 @@ function AppContent() {
             }
           />
           <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <UserManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/batches"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <BatchManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <OrderManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/activity"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <ActivityLogs />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Protected — Other Dashboards */}
+          <Route
             path="/manager"
             element={
               <ProtectedRoute allowedRoles={['MANAGER', 'ADMIN']}>
                 <ManagerDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manager/reports"
+            element={
+              <ProtectedRoute allowedRoles={['MANAGER', 'ADMIN']}>
+                <ReportsPage />
               </ProtectedRoute>
             }
           />
@@ -103,7 +169,7 @@ function AppContent() {
             }
           />
 
-          {/* Redirect root by role */}
+          {/* Redirect root by role (landing page for non-authenticated) */}
           <Route path="/" element={<RoleBasedRedirect />} />
 
           {/* Catch-all */}
@@ -111,14 +177,18 @@ function AppContent() {
         </Routes>
       </main>
 
-      <Footer />
+      {!isLandingPage && <Footer />}
     </div>
   );
 }
 
 function RoleBasedRedirect() {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/auth" replace />;
+  
+  // If not logged in, show landing page
+  if (!user) return <LandingPage />;
+  
+  // If logged in, redirect based on role
   const role = user.role?.toUpperCase();
   if (role === 'ADMIN')    return <Navigate to="/admin"    replace />;
   if (role === 'MANAGER')  return <Navigate to="/manager"  replace />;
