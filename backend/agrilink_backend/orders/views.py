@@ -44,7 +44,9 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     # ✅ CREATE ORDER
     def perform_create(self, serializer):
-        serializer.save(customer=self.request.user)
+        user = self.request.user
+        print(f"[DEBUG] Order creation - User: {user.username}, Role: {user.role}")
+        serializer.save(customer=user)
 
     # ✅ UPDATE ORDER STATUS
     @action(detail=True, methods=['post'])

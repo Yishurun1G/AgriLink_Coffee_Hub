@@ -26,8 +26,19 @@ export const getAllMyTrackings = () =>
 // Move the delivery to the next status step.
 // The backend decides what "next" means based on the current status:
 //   PICKED_UP → IN_TRANSIT → NEARBY → DELIVERED
-export const advanceStatus = (trackingId) =>
-  api.post(`tracking/${trackingId}/advance-status/`).then((r) => r.data);
+export const advanceStatus = (trackingId) => {
+  console.log('advanceStatus called with trackingId:', trackingId);
+  return api.post(`tracking/${trackingId}/advance-status/`)
+    .then((r) => {
+      console.log('advanceStatus response:', r.data);
+      return r.data;
+    })
+    .catch((err) => {
+      console.error('advanceStatus error:', err);
+      console.error('Error response:', err?.response);
+      throw err;
+    });
+};
 
 
 // ── Dealer ────────────────────────────────────────────────────────────────────

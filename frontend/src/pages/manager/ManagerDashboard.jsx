@@ -137,8 +137,9 @@ const ManagerDashboard = () => {
   // ── Fetch all data ──────────────────────────────────────────────────────
   const fetchBatches = async () => {
     try {
-      const res  = await axios.get('/batches/');
+      const res  = await axios.get('/batches/?page_size=100');
       const data = res.data?.results ?? res.data;
+      console.log('Manager fetched batches:', data);
       setBatches(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch batches:', err);
@@ -162,11 +163,12 @@ const ManagerDashboard = () => {
 
   const fetchDealers = async () => {
     try {
-      // Fetch all users without pagination limit to ensure all dealers are available
-      const res  = await axios.get('/users/?page_size=100');
+      // Fetch all dealers using role filter
+      const res  = await axios.get('/users/?role=DEALER&page_size=100');
       const data = res.data?.results ?? res.data;
       const all  = Array.isArray(data) ? data : [];
-      setDealers(all.filter((u) => u.role?.toUpperCase() === 'DEALER'));
+      console.log('Fetched dealers:', all);
+      setDealers(all);
     } catch (err) {
       console.error('Failed to fetch dealers:', err);
       setDealers([]);

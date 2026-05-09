@@ -15,6 +15,7 @@ import {
   resolveThread,
   reopenThread,
   deleteMessage,
+  findThreadWithUser,
 } from '../../api/communicationApi';
 
 // --- Time & Date Helpers ---
@@ -97,6 +98,23 @@ const NewThreadModal = ({ onClose, onCreated, currentUser }) => {
     }
     setLoading(true); setError('');
     try {
+      // First, check if a thread already exists with this user
+      try {
+        const existingThread = await findThreadWithUser(selectedUser);
+        console.log('Found existing thread:', existingThread);
+        // If we found an existing thread, just open it and send the message there
+        await sendMessage(existingThread.id, message.trim());
+        const fullThread = await getThread(existingThread.id);
+        onCreated(fullThread);
+        return;
+      } catch (err) {
+        // 404 means no existing thread, so we'll create a new one below
+        if (err?.response?.status !== 404) {
+          throw err; // Re-throw if it's not a 404
+        }
+      }
+      
+      // No existing thread found, create a new one
       const created = await createThread({
         subject: subject.trim(),
         participant_ids: [parseInt(selectedUser)],
@@ -181,20 +199,34 @@ const NewThreadModal = ({ onClose, onCreated, currentUser }) => {
 };
 
 // --- checkIsMine Helper ---
-// Figures out whether a message was sent by the current user.
-// We check in order: our local optimistic flag (_isMine), then sender ID comparison,
-// then sender username comparison, and finally the backend's is_mine field.
-// Using String() on IDs avoids bugs where one side is a number and the other is a string.
+// Determines if a message was sent by the current user.
+// Priority order:
+// 1. Local _isMine flag (for optimistic UI updates)
+// 2. Backend is_mine field (most reliable)
+// 3. Compare sender ID with current user ID
+// 4. Compare sender username with current user username
 const checkIsMine = (msg, currentUser) => {
-  if (!currentUser) return false;
-  if (msg._isMine === true) return true; // optimistic flag
-  if (msg.sender?.id !== undefined && currentUser.id !== undefined) {
+  // Check local optimistic flag first (for messages just sent)
+  if (msg._isMine === true) {
+    return true;
+  }
+  
+  // Use backend is_mine field if available (most reliable)
+  if (msg.is_mine !== undefined && msg.is_mine !== null) {
+    return msg.is_mine === true;
+  }
+  
+  // Fallback: compare IDs
+  if (msg.sender?.id !== undefined && currentUser?.id !== undefined) {
     return String(msg.sender.id) === String(currentUser.id);
   }
-  if (msg.sender?.username && currentUser.username) {
+  
+  // Last resort: compare usernames
+  if (msg.sender?.username && currentUser?.username) {
     return msg.sender.username === currentUser.username;
   }
-  return msg.is_mine === true;
+  
+  return false;
 };
 
 // --- BatchChat Main Component ---
@@ -237,6 +269,39 @@ export default function BatchChat() {
     }
   };
 
+  // --- Group threads by other participant ---
+  // If there are multiple threads with the same person, only show the most recent one
+  const getUniqueThreads = (threads) => {
+    if (!user) return threads;
+    
+    const threadsByUser = new Map();
+    
+    threads.forEach((t) => {
+      const otherUsers = t.participants?.filter(
+        (p) => String(p.id) !== String(user.id)
+      ) || [];
+      
+      // Skip threads with no other participants or multiple participants
+      if (otherUsers.length !== 1) {
+        console.warn(`Thread ${t.id} has ${otherUsers.length} other participants, skipping`);
+        return;
+      }
+      
+      const otherUserId = otherUsers[0].id;
+      
+      // If we haven't seen this user yet, or this thread is more recent, use it
+      if (!threadsByUser.has(otherUserId) || 
+          new Date(t.updated_at) > new Date(threadsByUser.get(otherUserId).updated_at)) {
+        threadsByUser.set(otherUserId, t);
+      }
+    });
+    
+    // Convert map back to array, sorted by most recent
+    return Array.from(threadsByUser.values()).sort(
+      (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+    );
+  };
+
   // --- Message Polling ---
   // When the user opens a thread, immediately load its messages,
   // then keep refreshing every 5 seconds to pick up new messages from the other person.
@@ -244,6 +309,16 @@ export default function BatchChat() {
   useEffect(() => {
     clearInterval(pollRef.current);
     if (!activeThread) return;
+    
+    // Mark thread as read when opened (clear unread count)
+    if (activeThread.unread_count > 0) {
+      setThreads((prev) =>
+        prev.map((t) =>
+          t.id === activeThread.id ? { ...t, unread_count: 0 } : t
+        )
+      );
+    }
+    
     fetchMessages(activeThread.id);
     pollRef.current = setInterval(() => fetchMessages(activeThread.id), 5000);
     return () => clearInterval(pollRef.current);
@@ -253,11 +328,25 @@ export default function BatchChat() {
     setLoadingMessages(true);
     try {
       const data = await getMessages(threadId);
-      setMessages(data.results ?? data);
+      const messageList = data.results ?? data;
+      
+      // Debug: Check what we're getting from backend
+      console.log(`\n=== FETCH MESSAGES ===`);
+      console.log(`Current user: ${user?.username} (ID: ${user?.id})`);
+      console.log(`Fetched ${messageList.length} messages:`);
+      messageList.forEach(msg => {
+        const shouldBeMine = String(msg.sender?.id) === String(user?.id);
+        const backendSays = msg.is_mine;
+        const match = shouldBeMine === backendSays ? '✓' : '✗ MISMATCH';
+        console.log(`  ${match} "${msg.body.substring(0, 30)}" | sender: ${msg.sender?.username} (${msg.sender?.id}) | is_mine: ${backendSays} | should be: ${shouldBeMine}`);
+      });
+      console.log(`======================\n`);
+      
+      setMessages(messageList);
     } finally {
       setLoadingMessages(false);
     }
-  }, []);
+  }, [user]);
 
   // --- Auto Scroll ---
   // Every time the messages list changes, scroll to the bottom
@@ -278,8 +367,19 @@ export default function BatchChat() {
     setInput('');
     try {
       const msg = await sendMessage(activeThread.id, body);
-      // _isMine is our local flag so it always renders on the right
-      setMessages((prev) => [...prev, { ...msg, _isMine: true }]);
+      // Add the message with proper flags for immediate display
+      const optimisticMsg = {
+        ...msg,
+        _isMine: true,
+        is_mine: true,
+        sender: {
+          id: user?.id,
+          username: user?.username,
+          email: user?.email,
+          role: user?.role,
+        }
+      };
+      setMessages((prev) => [...prev, optimisticMsg]);
       setThreads((prev) =>
         prev.map((t) =>
           t.id === activeThread.id
@@ -369,25 +469,35 @@ export default function BatchChat() {
             ) : threads.length === 0 ? (
               <p style={styles.hint}>No conversations yet.</p>
             ) : (
-              threads.map((t) => (
-                <div
-                  key={t.id}
-                  className={`thread-item${activeThread?.id === t.id ? ' active' : ''}`}
-                  style={styles.threadItem}
-                  onClick={() => setActiveThread(t)}
-                >
-                  <Avatar name={t.created_by?.username} size={38} />
-                  <div style={styles.threadInfo}>
-                    <div style={styles.threadSubject}>{t.subject}</div>
-                    <div style={styles.threadPreview}>{t.last_message?.body || 'No messages yet'}</div>
+              getUniqueThreads(threads).map((t) => {
+                // Get the other participants (not the current user)
+                const otherUsers = t.participants?.filter(
+                  (p) => String(p.id) !== String(user?.id)
+                ) || [];
+                
+                // Show only the first other user's name (for 1-on-1 chats)
+                const displayName = otherUsers[0]?.username || t.created_by?.username || 'Unknown';
+                
+                return (
+                  <div
+                    key={t.id}
+                    className={`thread-item${activeThread?.id === t.id ? ' active' : ''}`}
+                    style={styles.threadItem}
+                    onClick={() => setActiveThread(t)}
+                  >
+                    <Avatar name={displayName} size={38} />
+                    <div style={styles.threadInfo}>
+                      <div style={styles.threadSubject}>{displayName}</div>
+                      <div style={styles.threadPreview}>{t.last_message?.body || 'No messages yet'}</div>
+                    </div>
+                    <div style={styles.threadMeta}>
+                      {t.updated_at && <span style={styles.threadTime}>{fmtTime(t.updated_at)}</span>}
+                      {t.unread_count > 0 && <span style={styles.badge}>{t.unread_count}</span>}
+                      {t.is_resolved && <span style={{ fontSize: 12, color: '#4caf50' }}>✓</span>}
+                    </div>
                   </div>
-                  <div style={styles.threadMeta}>
-                    {t.updated_at && <span style={styles.threadTime}>{fmtTime(t.updated_at)}</span>}
-                    {t.unread_count > 0 && <span style={styles.badge}>{t.unread_count}</span>}
-                    {t.is_resolved && <span style={{ fontSize: 12, color: '#4caf50' }}>✓</span>}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </aside>
@@ -403,10 +513,10 @@ export default function BatchChat() {
             <>
               <div style={styles.chatHeader}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Avatar name={otherParticipants[0]?.username} size={40} />
+                  <Avatar name={otherParticipants[0]?.username || 'Unknown'} size={40} />
                   <div>
                     <div style={{ fontSize: 15, fontWeight: 600, color: '#2d1a0e' }}>
-                      {otherParticipants.map((p) => p.username).join(', ') || 'Thread'}
+                      {otherParticipants[0]?.username || 'Thread'}
                     </div>
                     <div style={{ fontSize: 12, color: '#9E7B5A', marginTop: 1 }}>{activeThread.subject}</div>
                   </div>
@@ -444,6 +554,11 @@ export default function BatchChat() {
 
                     const isMine = checkIsMine(item.data, user);
                     const senderName = item.data.sender?.username || '';
+                    
+                    // Debug logging to verify alignment
+                    const side = isMine ? 'RIGHT' : 'LEFT';
+                    const bgColor = isMine ? 'BROWN' : 'WHITE';
+                    console.log(`[RENDER] ${isMine ? '→' : '←'} ${side} | "${item.data.body.substring(0, 20)}" | From: ${senderName} (${item.data.sender?.id}) | Viewing as: ${user?.username} (${user?.id}) | isMine: ${isMine} | backend is_mine: ${item.data.is_mine} | BG: ${bgColor}`);
 
                     return (
                       <div
@@ -455,22 +570,23 @@ export default function BatchChat() {
                           alignItems: 'flex-end',
                           gap: 8,
                           marginBottom: 6,
+                          width: '100%',
                         }}
                         onMouseEnter={() => setHoveredMsg(item.data.id)}
                         onMouseLeave={() => setHoveredMsg(null)}
                       >
-                        {/* Avatar on the left for received messages */}
+                        {/* Avatar on the left for received messages only */}
                         {!isMine && <Avatar name={senderName} size={30} />}
 
                         <div style={{ maxWidth: '65%' }}>
-                          {/* Sender name above received messages */}
+                          {/* Sender name above received messages only */}
                           {!isMine && (
                             <div style={{ fontSize: 11, color: '#9E7B5A', marginBottom: 3, paddingLeft: 4 }}>
                               {senderName}
                             </div>
                           )}
 
-                          {/* Bubble */}
+                          {/* Message Bubble */}
                           <div style={{
                             padding: '10px 14px',
                             fontSize: 14,
@@ -505,7 +621,7 @@ export default function BatchChat() {
                           </div>
                         </div>
 
-                        {/* Delete button on sent messages */}
+                        {/* Delete button on sent messages only */}
                         {isMine && hoveredMsg === item.data.id && (
                           <button
                             className="del-btn"

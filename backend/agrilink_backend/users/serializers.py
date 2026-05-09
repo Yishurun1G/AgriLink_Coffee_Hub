@@ -4,9 +4,14 @@ from .models import User
 
 class UserSerializer(serializers.ModelSerializer):
     """For returning user data to frontend"""
+    role = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'role', 'phone_number', 'location']
+
+    def get_role(self, obj):
+        return obj.role.upper() if obj.role else obj.role
 
 
 class RegisterSerializer(serializers.ModelSerializer):

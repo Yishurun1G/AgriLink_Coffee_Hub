@@ -24,7 +24,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     }
 
     // 3. Gate 2: Does the user have the correct role for this page?
-    if (allowedRoles && !allowedRoles.includes(user.role)) {
+    const userRole = user.role?.toUpperCase();
+    if (allowedRoles && !allowedRoles.map(r => r.toUpperCase()).includes(userRole)) {
         // If they are a Customer trying to see the Admin page, bounce them to an unauthorized view
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">

@@ -88,12 +88,21 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='advance-status')
     def advance_status(self, request, pk=None):
         tracking = self.get_object()
-        if request.user.role.upper() != 'CUSTOMER':
+        user_role = getattr(request.user, 'role', '').upper()
+        
+        print(f"[DEBUG] advance_status called by user: {request.user.username}, role: {user_role}")
+        print(f"[DEBUG] tracking status: {tracking.status}, order customer: {tracking.order.customer.username}")
+        
+        if user_role != 'CUSTOMER':
             return Response({'detail': 'Only customers can advance the delivery status.'}, status=status.HTTP_403_FORBIDDEN)
         if tracking.order.customer != request.user:
             return Response({'detail': 'This is not your order.'}, status=status.HTTP_403_FORBIDDEN)
 
         # Map of current status → what it becomes when the customer confirms
+        # Customer confirms through all three steps:
+        #   PICKED_UP  → IN_TRANSIT
+        #   IN_TRANSIT → NEARBY
+        #   NEARBY     → DELIVERED
         transitions = {
             'PICKED_UP':  'IN_TRANSIT',
             'IN_TRANSIT': 'NEARBY',
@@ -101,6 +110,8 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
         }
 
         next_status = transitions.get(tracking.status)
+        print(f"[DEBUG] Current status: {tracking.status}, Next status: {next_status}")
+        
         if not next_status:
             return Response(
                 {'detail': f'Cannot advance from {tracking.status}.'},
@@ -115,6 +126,7 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
             tracking.order.save(update_fields=['status'])
 
         tracking.save(update_fields=['status', 'updated_at'])
+        print(f"[DEBUG] Status updated to: {tracking.status}")
         return Response(DeliveryTrackingSerializer(tracking, context={'request': request}).data)
 
     # ── Manager: assign a dealer to an order ─────────────────────────────────
@@ -122,7 +134,8 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
     # After this point the manager's job is done — dealer and customer take over.
     @action(detail=False, methods=['post'], url_path='assign')
     def assign(self, request):
-        if request.user.role.upper() not in ('MANAGER', 'ADMIN'):
+        user_role = getattr(request.user, 'role', '').upper()
+        if user_role not in ('MANAGER', 'ADMIN'):
             return Response({'detail': 'Only managers can assign deliveries.'}, status=status.HTTP_403_FORBIDDEN)
 
         order_id  = request.data.get('order_id')
@@ -135,7 +148,17 @@ class DeliveryTrackingViewSet(viewsets.ModelViewSet):
 
         from django.contrib.auth import get_user_model
         User   = get_user_model()
-        dealer = get_object_or_404(User, id=dealer_id, role__iexact='dealer')
+        
+        # Strict validation: dealer must have role='DEALER' (case-insensitive)
+        try:
+            dealer = User.objects.get(id=dealer_id)
+            if dealer.role.upper() != 'DEALER':
+                return Response(
+                    {'detail': f'User {dealer.username} is not a dealer (role: {dealer.role}).'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except User.DoesNotExist:
+            return Response({'detail': 'Dealer not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         tracking = DeliveryTracking.objects.create(
             order=order, dealer=dealer,

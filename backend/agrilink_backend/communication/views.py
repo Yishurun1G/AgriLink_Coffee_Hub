@@ -91,6 +91,37 @@ class ThreadViewSet(viewsets.ModelViewSet):
         MessageReadReceipt.objects.bulk_create(receipts, ignore_conflicts=True)
         return Response(serializer.data)
 
+    # Find an existing thread with a specific user
+    # Used to prevent creating duplicate threads with the same person
+    @action(detail=False, methods=["get"], url_path="find-with-user/(?P<user_id>[^/.]+)")
+    def find_with_user(self, request, user_id=None):
+        """Find an existing thread between the current user and the specified user"""
+        from django.contrib.auth import get_user_model
+        from django.db.models import Count, Q
+        
+        User = get_user_model()
+        try:
+            other_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Find threads where both users are participants and there are exactly 2 participants
+        threads = Thread.objects.filter(
+            participants=request.user
+        ).filter(
+            participants=other_user
+        ).annotate(
+            participant_count=Count('participants')
+        ).filter(
+            participant_count=2
+        ).order_by('-updated_at')
+        
+        if threads.exists():
+            thread = threads.first()
+            return Response(ThreadSerializer(thread, context={"request": request}).data)
+        else:
+            return Response({"detail": "No existing thread found."}, status=status.HTTP_404_NOT_FOUND)
+
 
 # --- MessageViewSet ---
 # Handles sending, reading, and deleting individual messages.

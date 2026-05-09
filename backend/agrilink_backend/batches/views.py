@@ -48,21 +48,22 @@ class BatchViewSet(viewsets.ModelViewSet):
 
     
     def get_queryset(self):
-     user = self.request.user
+        user = self.request.user
+        role = getattr(user, 'role', '').upper()
 
-    # 🔥 Customer ONLY sees approved batches
-     if user.role == 'CUSTOMER':
-        return Batch.objects.filter(status='APPROVED')
+        # Customer ONLY sees approved batches
+        if role == 'CUSTOMER':
+            return Batch.objects.filter(status='APPROVED')
 
-    # 🔥 Dealer sees only their own batches
-     if user.role == 'DEALER':
-        return Batch.objects.filter(dealer=user)
+        # Dealer sees only their own batches
+        if role == 'DEALER':
+            return Batch.objects.filter(dealer=user)
 
-    # 🔥 Manager sees everything
-     if user.role in ['MANAGER', 'ADMIN']:
-        return Batch.objects.all()
+        # Manager sees everything
+        if role in ['MANAGER', 'ADMIN']:
+            return Batch.objects.all()
 
-     return Batch.objects.none()
+        return Batch.objects.none()
        
     # 👤 Auto assign dealer
     def perform_create(self, serializer):

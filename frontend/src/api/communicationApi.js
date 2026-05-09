@@ -60,3 +60,8 @@ export const deleteMessage = (messageId) =>
 // Mark a single message as read for the current user.
 export const markMessageRead = (messageId) =>
   api.post(`communication/messages/${messageId}/mark_read/`).then((r) => r.data);
+
+// Find an existing thread with a specific user (to prevent duplicates).
+// Returns the thread if found, or throws a 404 error if no thread exists.
+export const findThreadWithUser = (userId) =>
+  api.get(`communication/threads/find-with-user/${userId}/`).then((r) => r.data);

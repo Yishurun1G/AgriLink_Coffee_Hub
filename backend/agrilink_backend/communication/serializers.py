@@ -33,7 +33,19 @@ class MessageSerializer(serializers.ModelSerializer):
     # The frontend uses this to decide which side of the chat to show the bubble on.
     def get_is_mine(self, obj):
         request = self.context.get("request")
-        return request and obj.sender_id == request.user.id
+        if not request or not request.user:
+            return False
+        
+        # Ensure both IDs are compared as integers to avoid type mismatch
+        sender_id = int(obj.sender_id) if obj.sender_id else None
+        user_id = int(request.user.id) if request.user.id else None
+        
+        result = sender_id == user_id
+        
+        # Debug logging
+        print(f"[get_is_mine] Message {obj.id}: sender_id={sender_id} (type: {type(sender_id)}), user_id={user_id} (type: {type(user_id)}), result={result}")
+        
+        return result
 
     # Returns a list of usernames who have read this message.
     # Used to show the double-tick (✓✓) on sent messages.
@@ -118,9 +130,10 @@ class ThreadCreateSerializer(serializers.ModelSerializer):
     def validate_participant_ids(self, participants):
         allowed_roles = {"ADMIN", "MANAGER", "DEALER"}
         for user in participants:
-            if user.role.upper() not in allowed_roles:
+            user_role = user.role.upper() if user.role else ''
+            if user_role not in allowed_roles:
                 raise serializers.ValidationError(
-                    f"User {user.username} cannot participate in communication threads."
+                    f"User {user.username} (role: {user.role}) cannot participate in communication threads. Only ADMIN, MANAGER, and DEALER roles are allowed."
                 )
         return participants
 

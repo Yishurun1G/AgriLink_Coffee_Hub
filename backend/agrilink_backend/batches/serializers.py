@@ -35,10 +35,16 @@ class BatchSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'dealer', 'validated_by', 'status', 'created_at', 'updated_at']
 
     def get_dealer_name(self, obj):
-        return obj.dealer.get_full_name() if obj.dealer else None
+        if not obj.dealer:
+            return None
+        full_name = obj.dealer.get_full_name()
+        return full_name if full_name.strip() else obj.dealer.username
 
     def get_validated_by_name(self, obj):
-        return obj.validated_by.get_full_name() if obj.validated_by else None
+        if not obj.validated_by:
+            return None
+        full_name = obj.validated_by.get_full_name()
+        return full_name if full_name.strip() else obj.validated_by.username
 
 
 class BatchCreateSerializer(serializers.ModelSerializer):
