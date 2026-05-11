@@ -12,6 +12,15 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+import dj_database_url
+import os
+
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL')
+    )
+}
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -67,7 +76,14 @@ ROOT_URLCONF = 'core.urls'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000", # React's default port
+    "https://agri-link-coffee-hub.vercel.app"
+
 ]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://agri-link-coffee-hub.vercel.app/"
+]
+
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',
