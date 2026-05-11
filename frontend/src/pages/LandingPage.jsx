@@ -1,301 +1,516 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Coffee, 
-  MessageSquare, 
-  BarChart3, 
-  Shield, 
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Coffee,
+  MessageSquare,
+  BarChart3,
+  Shield,
   ArrowRight,
-  CheckCircle
-} from 'lucide-react';
+  CheckCircle,
+  Users,
+  Globe,
+  TrendingUp,
+  Menu,
+  X,
+} from "lucide-react";
+
+import { motion } from "framer-motion";
+
+/* IMPORT CHATBOT */
+import ChatBot from "../components/chatbot/ChatBot.jsx"; // adjust path if needed
 
 const LandingPage = () => {
   const navigate = useNavigate();
+
+  const [mobileMenu, setMobileMenu] = React.useState(false);
 
   const features = [
     {
       icon: Coffee,
       title: "Coffee Supply Management",
-      description: "Track and manage coffee batches from farm to market with real-time inventory updates.",
-      color: "text-green-600",
-      bgColor: "bg-green-100"
+      description:
+        "Track coffee batches, inventory, logistics, and deliveries from farms to markets.",
     },
     {
       icon: MessageSquare,
-      title: "Dealer & Manager Communication",
-      description: "Built-in messaging system for seamless communication between all stakeholders.",
-      color: "text-blue-600",
-      bgColor: "bg-blue-100"
+      title: "Real-Time Communication",
+      description:
+        "Instant messaging between managers, dealers, admins, and customers.",
     },
     {
       icon: BarChart3,
       title: "Reports & Analytics",
-      description: "Comprehensive reports on sales, inventory, dealer performance, and revenue trends.",
-      color: "text-purple-600",
-      bgColor: "bg-purple-100"
+      description:
+        "Powerful analytics and reporting tools for better decision making.",
     },
     {
       icon: Shield,
-      title: "Secure Role-Based Access",
-      description: "Protected platform with role-specific permissions for admins, managers, dealers, and customers.",
-      color: "text-red-600",
-      bgColor: "bg-red-100"
-    }
+      title: "Secure Platform",
+      description:
+        "Enterprise-level security with role-based access and authentication.",
+    },
   ];
 
-  const steps = [
+  const stats = [
     {
-      number: "01",
-      title: "Register",
-      description: "Create your account as a dealer, manager, or customer in minutes."
+      icon: Users,
+      value: "10K+",
+      label: "Platform Users",
     },
     {
-      number: "02",
-      title: "Connect",
-      description: "Link with managers, dealers, and suppliers in the coffee supply chain."
+      icon: Coffee,
+      value: "500+",
+      label: "Coffee Dealers",
     },
     {
-      number: "03",
-      title: "Manage Digitally",
-      description: "Handle all coffee operations, orders, and communications in one platform."
-    }
+      icon: Globe,
+      value: "20+",
+      label: "Connected Regions",
+    },
+    {
+      icon: TrendingUp,
+      value: "98%",
+      label: "Operational Efficiency",
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=2061')",
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/70 to-black/60"></div>
-        </div>
+    <div className="bg-[#1B120D] text-white overflow-hidden relative">
+      {/* NAVBAR */}
+      <nav className="fixed top-0 left-0 w-full z-50 backdrop-blur-xl bg-[#1B120D]/80 border-b border-[#3E2723]">
+        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+          {/* LOGO */}
+          <div className="flex items-center gap-3">
+            <div className="bg-green-600 p-2 rounded-xl shadow-lg shadow-green-900/40">
+              <Coffee className="w-6 h-6 text-white" />
+            </div>
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 text-center text-white">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            Connecting Coffee Farmers,<br />
-            Dealers & Markets <span className="text-green-400">Digitally</span>
-          </h1>
-          <p className="text-xl md:text-2xl mb-8 text-gray-200 max-w-3xl mx-auto">
-            AgriLink CoffeeHub helps manage coffee trading, communication, reports, 
-            and supply operations in one platform.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <h1 className="text-2xl font-extrabold tracking-wide">
+              AgriLink CoffeeHub
+            </h1>
+          </div>
+
+          {/* DESKTOP MENU */}
+          <div className="hidden md:flex items-center gap-10 text-gray-300 font-medium">
+            <a href="#features" className="hover:text-green-400 transition">
+              Features
+            </a>
+
+            <a href="#stats" className="hover:text-green-400 transition">
+              Statistics
+            </a>
+
+            <a href="#dashboard" className="hover:text-green-400 transition">
+              Dashboard
+            </a>
+
+            <a href="#contact" className="hover:text-green-400 transition">
+              Contact
+            </a>
+          </div>
+
+          {/* BUTTONS */}
+          <div className="hidden md:flex items-center gap-4">
             <button
-              onClick={() => navigate('/register')}
-              className="px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2"
-            >
-              Get Started
-              <ArrowRight className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => navigate('/login')}
-              className="px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg text-lg border-2 border-white/30 transition-all"
+              onClick={() => navigate("/login")}
+              className="px-5 py-2 rounded-xl border border-[#5D4037] hover:bg-[#3E2723] transition"
             >
               Login
             </button>
+
+            <button
+              onClick={() => navigate("/register")}
+              className="px-5 py-2 rounded-xl bg-green-600 hover:bg-green-700 transition shadow-lg shadow-green-900/40"
+            >
+              Get Started
+            </button>
           </div>
+
+          {/* MOBILE */}
+          <button
+            onClick={() => setMobileMenu(!mobileMenu)}
+            className="md:hidden"
+          >
+            {mobileMenu ? <X size={30} /> : <Menu size={30} />}
+          </button>
         </div>
 
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-white/50 rounded-full flex items-start justify-center p-2">
-            <div className="w-1 h-3 bg-white/50 rounded-full"></div>
+        {/* MOBILE MENU */}
+        {mobileMenu && (
+          <div className="md:hidden bg-[#1B120D] border-t border-[#3E2723]">
+            <div className="flex flex-col gap-6 px-6 py-6">
+              <a href="#features">Features</a>
+              <a href="#stats">Statistics</a>
+              <a href="#dashboard">Dashboard</a>
+              <a href="#contact">Contact</a>
+
+              <button
+                onClick={() => navigate("/login")}
+                className="py-3 border border-[#5D4037] rounded-xl"
+              >
+                Login
+              </button>
+
+              <button
+                onClick={() => navigate("/register")}
+                className="py-3 bg-green-600 rounded-xl"
+              >
+                Get Started
+              </button>
+            </div>
           </div>
+        )}
+      </nav>
+
+      {/* HERO */}
+      <section className="relative min-h-screen flex items-center justify-center">
+        {/* BACKGROUND IMAGE */}
+        <div
+          className="absolute inset-0 bg-cover bg-center scale-110"
+          style={{
+            backgroundImage:
+              "url('https://images.unsplash.com/photo-1511537190424-bbbab87ac5eb?q=80&w=2070')",
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1B120D]/95 via-[#1B120D]/80 to-[#1B120D]/90"></div>
+        </div>
+
+        {/* BLUR EFFECTS */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-green-600/20 rounded-full blur-3xl"></div>
+
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-[#6F4E37]/40 rounded-full blur-3xl"></div>
+
+        {/* CONTENT */}
+        <motion.div
+          initial={{ opacity: 0, y: 70 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1 }}
+          className="relative z-10 text-center max-w-6xl px-6"
+        >
+          <div className="inline-flex items-center gap-3 bg-[#3E2723]/70 backdrop-blur-md border border-[#6F4E37] px-10 py-3 rounded-full mb-8 shadow-2xl">
+            <Coffee className="text-green-400" />
+            <span className="text-green-200">
+              Smart Coffee Supply Chain Platform
+            </span>
+          </div>
+
+          <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-8">
+            Connecting Coffee
+            <span className="text-green-400">
+              {" "}
+              Farmers, Dealers & Markets{" "}
+            </span>
+            Digitally
+          </h1>
+
+          <p className="text-xl md:text-2xl text-gray-300 leading-relaxed max-w-4xl mx-auto mb-10">
+            AgriLink CoffeeHub transforms coffee supply operations with
+            intelligent management, analytics, communication, and reporting
+            tools built for modern coffee businesses.
+          </p>
+
+          {/* BUTTONS */}
+          <div className="flex flex-col sm:flex-row gap-5 justify-center">
+            <button
+              onClick={() => navigate("/register")}
+              className="group px-8 py-4 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-bold text-lg shadow-2xl shadow-green-900/50 transition-all hover:scale-105 flex items-center justify-center gap-2"
+            >
+              Get Started
+              <ArrowRight className="group-hover:translate-x-1 transition" />
+            </button>
+
+            <button
+              onClick={() => navigate("/login")}
+              className="px-8 py-4 rounded-2xl border border-[#6F4E37] bg-[#3E2723]/60 backdrop-blur-md hover:bg-[#4E342E] transition-all text-lg font-bold"
+            >
+              Explore Platform
+            </button>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* STATS */}
+      <section
+        id="stats"
+        className="relative z-20 py-10 -mt-20 max-w-7xl mx-auto px-6 transition-all"
+      >
+        <div className="grid md:grid-cols-4 gap-8">
+          {stats.map((stat, index) => {
+            const Icon = stat.icon;
+
+            return (
+              <motion.div
+                whileHover={{ y: -10 }}
+                key={index}
+                className="bg-[#2A1B16] border border-[#4E342E] rounded-3xl p-8 shadow-[0_20px_50px_rgba(0,0,0,0.6)] hover:shadow-green-900/30 transition-all"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-green-600/20 flex items-center justify-center mb-6">
+                  <Icon className="w-8 h-8 text-green-400" />
+                </div>
+
+                <h2 className="text-4xl font-extrabold mb-2">
+                  {stat.value}
+                </h2>
+
+                <p className="text-gray-400">{stat.label}</p>
+              </motion.div>
+            );
+          })}
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Powerful Features for Coffee Trading
+      {/* FEATURES */}
+      <section id="features" className="py-32">
+        <div className="max-w-7xl mx-auto px-6">
+          {/* HEADER */}
+          <div className="text-center mb-20">
+            <h2 className="text-5xl font-extrabold mb-5">
+              Powerful Features
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Everything you need to manage your coffee supply chain efficiently
+
+            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+              Everything you need to modernize and manage your coffee business
+              digitally.
             </p>
           </div>
 
+          {/* FEATURE CARDS */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => {
               const Icon = feature.icon;
+
               return (
-                <div
+                <motion.div
+                  whileHover={{ y: -10 }}
                   key={index}
-                  className="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-2"
+                  className="group bg-[#2A1B16] border border-[#4E342E] rounded-3xl p-8 shadow-[0_20px_60px_rgba(0,0,0,0.7)] hover:border-green-700 transition-all"
                 >
-                  <div className={`w-16 h-16 ${feature.bgColor} rounded-full flex items-center justify-center mb-4`}>
-                    <Icon className={`w-8 h-8 ${feature.color}`} />
+                  <div className="w-16 h-16 rounded-2xl bg-green-600/20 flex items-center justify-center mb-6 group-hover:bg-green-600 transition">
+                    <Icon className="w-8 h-8 text-green-400 group-hover:text-white transition" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+
+                  <h3 className="text-2xl font-bold mb-4">
                     {feature.title}
                   </h3>
-                  <p className="text-gray-600 leading-relaxed">
+
+                  <p className="text-gray-400 leading-relaxed">
                     {feature.description}
                   </p>
-                </div>
+                </motion.div>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              How It Works
+      {/* DASHBOARD */}
+      <section
+        id="dashboard"
+        className="py-32 bg-gradient-to-br from-[#241510] to-[#1B120D]"
+      >
+        <div className="max-w-7xl mx-auto px-6">
+          {/* HEADER */}
+          <div className="text-center mb-20">
+            <h2 className="text-5xl font-extrabold mb-5">
+              Smart Dashboard Experience
             </h2>
-            <p className="text-xl text-gray-600">
-              Get started in three simple steps
+
+            <p className="text-xl text-gray-400">
+              Powerful tools for admins, managers, and dealers.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-12">
-            {steps.map((step, index) => (
-              <div key={index} className="text-center relative">
-                {index < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-16 left-1/2 w-full h-0.5 bg-green-200"></div>
-                )}
-                
-                <div className="relative z-10 mb-6">
-                  <div className="w-32 h-32 mx-auto bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-xl">
-                    <span className="text-5xl font-bold text-white">{step.number}</span>
-                  </div>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  {step.title}
+          {/* DASHBOARD CARDS */}
+          <div className="grid md:grid-cols-3 gap-10">
+            {/* ADMIN */}
+            <motion.div
+              whileHover={{ y: -10 }}
+              className="bg-[#2A1B16] rounded-3xl overflow-hidden border border-[#4E342E] shadow-[0_20px_60px_rgba(0,0,0,0.7)]"
+            >
+              <div className="h-56 bg-gradient-to-br from-green-700 to-green-900 flex items-center justify-center">
+                <BarChart3 className="w-28 h-28 text-white" />
+              </div>
+
+              <div className="p-8">
+                <h3 className="text-2xl font-bold mb-4">
+                  Admin Dashboard
                 </h3>
-                <p className="text-gray-600 text-lg">
-                  {step.description}
+
+                <p className="text-gray-400 leading-relaxed">
+                  Manage users, reports, analytics, system operations, and
+                  monitor business activities.
                 </p>
               </div>
-            ))}
+            </motion.div>
+
+            {/* CHAT */}
+            <motion.div
+              whileHover={{ y: -10 }}
+              className="bg-[#2A1B16] rounded-3xl overflow-hidden border border-[#4E342E] shadow-[0_20px_60px_rgba(0,0,0,0.7)]"
+            >
+              <div className="h-56 bg-gradient-to-br from-[#6F4E37] to-[#4E342E] flex items-center justify-center">
+                <MessageSquare className="w-28 h-28 text-white" />
+              </div>
+
+              <div className="p-8">
+                <h3 className="text-2xl font-bold mb-4">
+                  Communication System
+                </h3>
+
+                <p className="text-gray-400 leading-relaxed">
+                  Real-time messaging and collaboration between all coffee
+                  supply chain stakeholders.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* COFFEE */}
+            <motion.div
+              whileHover={{ y: -10 }}
+              className="bg-[#2A1B16] rounded-3xl overflow-hidden border border-[#4E342E] shadow-[0_20px_60px_rgba(0,0,0,0.7)]"
+            >
+              <div className="h-56 bg-gradient-to-br from-green-600 to-[#3E2723] flex items-center justify-center">
+                <Coffee className="w-28 h-28 text-white" />
+              </div>
+
+              <div className="p-8">
+                <h3 className="text-2xl font-bold mb-4">
+                  Coffee Management
+                </h3>
+
+                <p className="text-gray-400 leading-relaxed">
+                  Manage inventory, coffee batches, logistics, orders, and
+                  supplier operations efficiently.
+                </p>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Dashboard Preview Section */}
-      <section className="py-20 bg-gradient-to-br from-green-50 to-blue-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Intuitive Dashboard Experience
-            </h2>
-            <p className="text-xl text-gray-600">
-              Manage everything from one powerful interface
-            </p>
-          </div>
+      {/* CTA */}
+      <section className="relative py-32 overflow-hidden">
+        {/* BG */}
+        <div className="absolute inset-0 bg-gradient-to-r from-green-800 via-[#3E2723] to-[#1B120D]"></div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white rounded-xl shadow-xl overflow-hidden transform hover:scale-105 transition-all">
-              <div className="h-48 bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
-                <BarChart3 className="w-24 h-24 text-white" />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Admin Dashboard</h3>
-                <p className="text-gray-600">
-                  Complete system oversight with analytics, user management, and reports
-                </p>
-              </div>
-            </div>
+        <div className="absolute top-0 left-0 w-96 h-96 bg-green-500/20 rounded-full blur-3xl"></div>
 
-            <div className="bg-white rounded-xl shadow-xl overflow-hidden transform hover:scale-105 transition-all">
-              <div className="h-48 bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
-                <MessageSquare className="w-24 h-24 text-white" />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Chat System</h3>
-                <p className="text-gray-600">
-                  Real-time messaging between dealers, managers, and customers
-                </p>
-              </div>
-            </div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#6F4E37]/30 rounded-full blur-3xl"></div>
 
-            <div className="bg-white rounded-xl shadow-xl overflow-hidden transform hover:scale-105 transition-all">
-              <div className="h-48 bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center">
-                <Coffee className="w-24 h-24 text-white" />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Coffee Management</h3>
-                <p className="text-gray-600">
-                  Track batches, inventory, orders, and delivery in real-time
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-green-600 to-green-800">
-        <div className="max-w-4xl mx-auto px-6 text-center text-white">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+        {/* CONTENT */}
+        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
+          <h2 className="text-5xl md:text-6xl font-extrabold leading-tight mb-8">
             Ready to Transform Your Coffee Business?
           </h2>
-          <p className="text-xl mb-8 text-green-100">
-            Join hundreds of coffee dealers and managers already using AgriLink CoffeeHub
+
+          <p className="text-xl text-gray-300 leading-relaxed mb-10">
+            Join coffee dealers, suppliers, and managers already modernizing
+            their operations with AgriLink CoffeeHub.
           </p>
+
           <button
-            onClick={() => navigate('/register')}
-            className="px-10 py-5 bg-white text-green-700 hover:bg-gray-100 font-bold rounded-lg text-xl transition-all transform hover:scale-105 shadow-xl inline-flex items-center gap-2"
+            onClick={() => navigate("/register")}
+            className="group px-10 py-5 rounded-2xl bg-white text-[#1B120D] font-bold text-xl hover:scale-105 transition-all shadow-2xl inline-flex items-center gap-3"
           >
             Get Started Today
-            <CheckCircle className="w-6 h-6" />
+
+            <CheckCircle className="group-hover:rotate-12 transition" />
           </button>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 py-12">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h3 className="text-white text-xl font-bold mb-4 flex items-center gap-2">
-                <Coffee className="w-6 h-6 text-green-500" />
+      {/* FOOTER */}
+      <footer
+        id="contact"
+        className="bg-[#120C09] border-t border-[#3E2723] py-20"
+      >
+        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-14">
+          {/* BRAND */}
+          <div>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="bg-green-600 p-2 rounded-xl">
+                <Coffee className="text-white" />
+              </div>
+
+              <h2 className="text-2xl font-bold">
                 AgriLink CoffeeHub
-              </h3>
-              <p className="text-gray-400">
-                Connecting the coffee supply chain digitally
-              </p>
+              </h2>
             </div>
-            
-            <div>
-              <h4 className="text-white font-semibold mb-4">About</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="hover:text-green-400 transition-colors">Our Story</a></li>
-                <li><a href="#" className="hover:text-green-400 transition-colors">Team</a></li>
-                <li><a href="#" className="hover:text-green-400 transition-colors">Careers</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="text-white font-semibold mb-4">Contact</h4>
-              <ul className="space-y-2">
-                <li><a href="mailto:info@agrilinkcoffeehub.com" className="hover:text-green-400 transition-colors">info@agrilinkcoffeehub.com</a></li>
-                <li><a href="#" className="hover:text-green-400 transition-colors">Support</a></li>
-                <li><a href="#" className="hover:text-green-400 transition-colors">FAQ</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="text-white font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="hover:text-green-400 transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-green-400 transition-colors">Terms of Service</a></li>
-              </ul>
-            </div>
+
+            <p className="text-gray-400 leading-relaxed">
+              A modern coffee supply chain platform connecting coffee farms,
+              dealers, managers, and markets digitally.
+            </p>
           </div>
-          
-          <div className="border-t border-gray-800 pt-8 text-center text-gray-400">
-            <p>&copy; {new Date().getFullYear()} AgriLink CoffeeHub. All rights reserved.</p>
+
+          {/* LINKS */}
+          <div>
+            <h3 className="text-xl font-bold mb-6">Platform</h3>
+
+            <ul className="space-y-4 text-gray-400">
+              <li className="hover:text-green-400 transition cursor-pointer">
+                Dashboard
+              </li>
+
+              <li className="hover:text-green-400 transition cursor-pointer">
+                Reports
+              </li>
+
+              <li className="hover:text-green-400 transition cursor-pointer">
+                Communication
+              </li>
+            </ul>
+          </div>
+
+          {/* COMPANY */}
+          <div>
+            <h3 className="text-xl font-bold mb-6">Company</h3>
+
+            <ul className="space-y-4 text-gray-400">
+              <li className="hover:text-green-400 transition cursor-pointer">
+                About
+              </li>
+
+              <li className="hover:text-green-400 transition cursor-pointer">
+                Careers
+              </li>
+
+              <li className="hover:text-green-400 transition cursor-pointer">
+                Contact
+              </li>
+            </ul>
+          </div>
+
+          {/* SUPPORT */}
+          <div>
+            <h3 className="text-xl font-bold mb-6">Support</h3>
+
+            <ul className="space-y-4 text-gray-400">
+              <li className="hover:text-green-400 transition cursor-pointer">
+                Help Center
+              </li>
+
+              <li className="hover:text-green-400 transition cursor-pointer">
+                Privacy Policy
+              </li>
+
+              <li className="hover:text-green-400 transition cursor-pointer">
+                Terms & Conditions
+              </li>
+            </ul>
           </div>
         </div>
+
+        {/* COPYRIGHT */}
+        <div className="border-t border-[#3E2723] mt-16 pt-8 text-center text-gray-500">
+          © {new Date().getFullYear()} AgriLink CoffeeHub. All rights reserved.
+        </div>
       </footer>
+
+      {/* CHATBOT */}
+      <div className="fixed bottom-6 right-6 z-[9999]">
+        <ChatBot />
+      </div>
     </div>
   );
 };

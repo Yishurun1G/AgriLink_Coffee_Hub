@@ -2,24 +2,56 @@ import { Link } from 'react-router-dom';
 
 const Footer = () => {
     return (
-        <footer className="bg-white border-t border-gray-100 mt-auto">
-            <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                <div className="md:flex md:items-center md:justify-between">
-                    
-                    {/* Brand & Copyright */}
-                    <div className="flex justify-center md:order-2 space-x-6 text-sm text-gray-500">
-                        <Link to="/" className="hover:text-green-600 transition">Home</Link>
-                        <Link to="/about" className="hover:text-green-600 transition">About</Link>
-                        <Link to="/privacy" className="hover:text-green-600 transition">Privacy Policy</Link>
-                    </div>
-                    
-                    {/* Quick Navigation */}
-                    <div className="mt-8 md:mt-0 md:order-1">
-                        <p className="text-center text-sm text-gray-400">
-                            &copy; {new Date().getFullYear()} AgriLink Coffee Hub. Secure Traceability for the Coffee Supply Chain.
+        <footer className="relative mt-auto overflow-hidden border-t border-white/5 bg-[#0d0d0d]">
+
+            {/* Ambient Glow */}
+            <div className="absolute top-0 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-green-500/10 blur-3xl"></div>
+
+            {/* Top glossy line */}
+            <div className="absolute inset-x-0 top-0 h-[1px] bg-white/10"></div>
+
+            {/* Texture */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_45%)]"></div>
+
+            <div className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+
+                <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+
+                    {/* Copyright */}
+                    <div>
+                        <p className="text-center text-sm tracking-wide text-gray-400 md:text-left">
+                            &copy; {new Date().getFullYear()} AgriLink Coffee Hub.
+                            <span className="block text-gray-500 md:inline md:ml-2">
+                                Secure Traceability for the Coffee Supply Chain.
+                            </span>
                         </p>
                     </div>
 
+                    {/* Navigation */}
+                    <div className="flex items-center gap-6 text-sm font-medium">
+
+                        <Link
+                            to="/"
+                            className="text-gray-400 transition duration-300 hover:text-green-400"
+                        >
+                            Home
+                        </Link>
+
+                        <Link
+                            to="/about"
+                            className="text-gray-400 transition duration-300 hover:text-green-400"
+                        >
+                            About
+                        </Link>
+
+                        <Link
+                            to="/privacy"
+                            className="text-gray-400 transition duration-300 hover:text-green-400"
+                        >
+                            Privacy Policy
+                        </Link>
+
+                    </div>
                 </div>
             </div>
         </footer>

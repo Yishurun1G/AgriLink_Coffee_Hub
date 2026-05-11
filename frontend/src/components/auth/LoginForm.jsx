@@ -3,82 +3,83 @@ import { AuthContext } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const LoginForm = () => {
-    // 1. Local state to hold what the user types
-    const [credentials, setCredentials] = useState({ username: '', password: '' });
+    // Local state
+    const [credentials, setCredentials] = useState({
+        username: '',
+        password: '',
+    });
+
     const [error, setError] = useState('');
-    
-    // 2. Grab the login function from our Global Auth Context
+
+    // Auth Context
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
 
+    // Submit Handler
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(''); // Clear any old error messages
+        setError('');
 
         try {
-            // 3. Call the login function from Context
             await login(credentials.username, credentials.password);
-            
-            // 4. On successful login, go to the landing page or a shared dashboard
-            navigate('/'); 
+            navigate('/');
         } catch (err) {
-            // If Django returns a 400 or 401 error, we catch it here
             setError('Invalid username or password. Please try again.');
         }
     };
 
-    // Helper to update state as the user types
+    // Input Change Handler
     const handleChange = (e) => {
         setCredentials({
             ...credentials,
-            [e.target.name]: e.target.value
+            [e.target.name]: e.target.value,
         });
     };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* Error Message Alert */}
+
+            {/* Error Message */}
             {error && (
-                <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+                <div className="rounded-2xl border border-red-500/10 bg-red-500/10 px-4 py-3 text-sm text-red-300 backdrop-blur-sm">
                     {error}
                 </div>
             )}
 
-            {/* Username Input */}
+            {/* Username */}
             <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="mb-2 block text-sm font-medium tracking-wide text-gray-300">
                     Username
                 </label>
-                <div className="mt-1">
+
+                <div className="relative">
                     <input
                         name="username"
                         type="text"
                         required
                         value={credentials.username}
                         onChange={handleChange}
-                        className="block w-full rounded-md border border-gray-300 
-                        px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-green-500 sm:text-sm"
                         placeholder="Enter your username"
+                        className="w-full rounded-2xl border border-white/5 bg-[#1b1b1b] px-4 py-3 text-white placeholder:text-gray-500 shadow-inner outline-none transition-all duration-300 focus:border-green-500/40 focus:bg-[#202020] focus:ring-2 focus:ring-green-500/20"
                     />
                 </div>
             </div>
 
-            {/* Password Input */}
+            {/* Password */}
             <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="mb-2 block text-sm font-medium tracking-wide text-gray-300">
                     Password
                 </label>
-                <div className="mt-1">
+
+                <div className="relative">
                     <input
                         name="password"
                         type="password"
                         required
                         value={credentials.password}
                         onChange={handleChange}
-                        className="block w-full rounded-md border border-gray-300 
-                        px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-green-500 sm:text-sm"
                         placeholder="••••••••"
+                        className="w-full rounded-2xl border border-white/5 bg-[#1b1b1b] px-4 py-3 text-white placeholder:text-gray-500 shadow-inner outline-none transition-all duration-300 focus:border-green-500/40 focus:bg-[#202020] focus:ring-2 focus:ring-green-500/20"
                     />
                 </div>
             </div>
@@ -87,11 +88,9 @@ const LoginForm = () => {
             <div>
                 <button
                     type="submit"
-                    className="flex w-full justify-center rounded-md border border-transparent
-                     bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 
-                     focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition"
+                    className="flex w-full items-center justify-center rounded-2xl bg-green-900 px-4 py-3 text-sm font-semibold tracking-wide text-white shadow-lg shadow-green-900/30 transition-all duration-300 hover:scale-[1.01] hover:bg-green-700"
                 >
-                    Sign in
+                    Sign In
                 </button>
             </div>
         </form>

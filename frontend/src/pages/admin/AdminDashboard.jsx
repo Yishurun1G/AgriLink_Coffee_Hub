@@ -5,6 +5,7 @@ import { getAdminStats } from '../../api/adminApi';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
+
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -16,33 +17,53 @@ const AdminDashboard = () => {
     const fetchStats = async () => {
         try {
             setLoading(true);
+
             const data = await getAdminStats();
+
             setStats(data);
         } catch (err) {
             console.error('Failed to fetch admin stats:', err);
+
             setError('Failed to load dashboard statistics');
         } finally {
             setLoading(false);
         }
     };
 
+    const cardStyle = {
+        backgroundImage:
+            "linear-gradient(rgba(15,31,23,0.90), rgba(15,31,23,0.90)), url('https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=1200&auto=format&fit=crop')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+    };
+
+    /* LOADING */
     if (loading) {
         return (
-            <div className="flex">
+            <div className="flex min-h-screen bg-[#0f1f17] text-white">
                 <AdminSidebar />
-                <div className="flex-grow p-8 bg-gray-50 flex items-center justify-center">
-                    <div className="text-gray-500">Loading dashboard...</div>
+
+                <div className="flex-grow flex items-center justify-center bg-gradient-to-br from-[#0f1f17] via-[#1b2d24] to-[#2d241c]">
+                    <div className="text-center">
+                        <div className="w-16 h-16 border-4 border-[#7a9d76] border-t-transparent rounded-full animate-spin mx-auto mb-5"></div>
+
+                        <p className="text-gray-300 text-lg">
+                            Loading dashboard...
+                        </p>
+                    </div>
                 </div>
             </div>
         );
     }
 
+    /* ERROR */
     if (error) {
         return (
-            <div className="flex">
+            <div className="flex min-h-screen bg-[#0f1f17] text-white">
                 <AdminSidebar />
-                <div className="flex-grow p-8 bg-gray-50">
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+
+                <div className="flex-grow p-8 bg-gradient-to-br from-[#0f1f17] via-[#1b2d24] to-[#2d241c]">
+                    <div className="bg-red-900/20 border border-red-500/30 text-red-300 px-6 py-5 rounded-3xl shadow-2xl">
                         {error}
                     </div>
                 </div>
@@ -51,190 +72,425 @@ const AdminDashboard = () => {
     }
 
     return (
-        <div className="flex">
+        <div className="flex min-h-screen bg-[#0f1f17] text-white">
             <AdminSidebar />
-            <div className="flex-grow p-8 bg-gray-50 overflow-y-auto">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
-                    <p className="text-gray-600 mt-1">Monitor system activity and manage platform operations</p>
-                </div>
 
-                {/* Quick Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {/* Total Users */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/users')}>
-                        <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm text-gray-500 font-medium">Total Users</p>
-                            <span className="text-2xl">👥</span>
-                        </div>
-                        <p className="text-3xl font-bold text-gray-800">{stats?.users?.total || 0}</p>
-                        <p className="text-xs text-green-600 mt-2">+{stats?.users?.new_this_week || 0} this week</p>
-                    </div>
+            <div className="flex-grow p-8 overflow-y-auto bg-gradient-to-br from-[#0f1f17] via-[#1b2d24] to-[#2d241c]">
 
-                    {/* Total Batches */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/batches')}>
-                        <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm text-gray-500 font-medium">Coffee Batches</p>
-                            <span className="text-2xl">☕</span>
-                        </div>
-                        <p className="text-3xl font-bold text-gray-800">{stats?.batches?.total || 0}</p>
-                        <p className="text-xs text-amber-600 mt-2">{stats?.batches?.pending || 0} pending approval</p>
-                    </div>
+                {/* HEADER */}
+                <div
+                    className="rounded-3xl overflow-hidden border border-[#4f6f52]/20 shadow-2xl mb-10"
+                    style={{
+                        backgroundImage:
+                            "linear-gradient(rgba(15,31,23,0.88), rgba(15,31,23,0.88)), url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop')",
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                    }}
+                >
+                    <div className="p-8 backdrop-blur-md">
+                        <h1 className="text-5xl font-extrabold text-white">
+                            Admin Dashboard
+                        </h1>
 
-                    {/* Total Orders */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/orders')}>
-                        <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm text-gray-500 font-medium">Total Orders</p>
-                            <span className="text-2xl">📦</span>
-                        </div>
-                        <p className="text-3xl font-bold text-gray-800">{stats?.orders?.total || 0}</p>
-                        <p className="text-xs text-blue-600 mt-2">{stats?.orders?.delivered || 0} delivered</p>
-                    </div>
-
-                    {/* Total Coffee */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                        <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm text-gray-500 font-medium">Total Coffee</p>
-                            <span className="text-2xl">⚖️</span>
-                        </div>
-                        <p className="text-3xl font-bold text-gray-800">{stats?.coffee?.total_kg?.toFixed(0) || 0}</p>
-                        <p className="text-xs text-gray-500 mt-2">kilograms</p>
+                        <p className="text-gray-300 mt-4 text-lg max-w-3xl">
+                            Monitor system activity and manage coffee platform operations
+                        </p>
                     </div>
                 </div>
 
-                {/* User Breakdown */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    {/* Users by Role */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Users by Role</h3>
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-purple-600">👑</span>
-                                    <span className="text-sm text-gray-600">Admins</span>
+                {/* QUICK STATS */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+
+                    {/* USERS */}
+                    <div
+                        onClick={() => navigate('/admin/users')}
+                        style={cardStyle}
+                        className="cursor-pointer rounded-3xl overflow-hidden border border-[#4f6f52]/20 shadow-2xl hover:scale-[1.02] transition-all duration-300"
+                    >
+                        <div className="p-7 backdrop-blur-md">
+
+                            <div className="flex items-center justify-between mb-5">
+                                <div>
+                                    <p className="text-sm text-gray-300 uppercase tracking-wide">
+                                        Total Users
+                                    </p>
+
+                                    <h2 className="text-5xl font-extrabold mt-3 text-white">
+                                        {stats?.users?.total || 0}
+                                    </h2>
                                 </div>
-                                <span className="text-lg font-bold text-gray-800">{stats?.users?.admins || 0}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-blue-600">👔</span>
-                                    <span className="text-sm text-gray-600">Managers</span>
+
+                                <div className="w-16 h-16 rounded-2xl bg-[#4f6f52]/40 flex items-center justify-center text-3xl shadow-xl">
+                                    👥
                                 </div>
-                                <span className="text-lg font-bold text-gray-800">{stats?.users?.managers || 0}</span>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-amber-600">🚚</span>
-                                    <span className="text-sm text-gray-600">Dealers</span>
-                                </div>
-                                <span className="text-lg font-bold text-gray-800">{stats?.users?.dealers || 0}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-green-600">🛒</span>
-                                    <span className="text-sm text-gray-600">Customers</span>
-                                </div>
-                                <span className="text-lg font-bold text-gray-800">{stats?.users?.customers || 0}</span>
-                            </div>
+
+                            <p className="text-sm text-[#b7d3b0]">
+                                +{stats?.users?.new_this_week || 0} this week
+                            </p>
                         </div>
                     </div>
 
-                    {/* Batch Status */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Batch Status</h3>
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-                                    <span className="text-sm text-gray-600">Pending</span>
+                    {/* BATCHES */}
+                    <div
+                        onClick={() => navigate('/admin/batches')}
+                        style={cardStyle}
+                        className="cursor-pointer rounded-3xl overflow-hidden border border-[#6f4e37]/20 shadow-2xl hover:scale-[1.02] transition-all duration-300"
+                    >
+                        <div className="p-7 backdrop-blur-md">
+
+                            <div className="flex items-center justify-between mb-5">
+                                <div>
+                                    <p className="text-sm text-gray-300 uppercase tracking-wide">
+                                        Coffee Batches
+                                    </p>
+
+                                    <h2 className="text-5xl font-extrabold mt-3 text-white">
+                                        {stats?.batches?.total || 0}
+                                    </h2>
                                 </div>
-                                <span className="text-lg font-bold text-gray-800">{stats?.batches?.pending || 0}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span className="w-3 h-3 rounded-full bg-green-500"></span>
-                                    <span className="text-sm text-gray-600">Approved</span>
+
+                                <div className="w-16 h-16 rounded-2xl bg-[#6f4e37]/40 flex items-center justify-center text-3xl shadow-xl">
+                                    ☕
                                 </div>
-                                <span className="text-lg font-bold text-gray-800">{stats?.batches?.approved || 0}</span>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span className="w-3 h-3 rounded-full bg-red-500"></span>
-                                    <span className="text-sm text-gray-600">Rejected</span>
-                                </div>
-                                <span className="text-lg font-bold text-gray-800">{stats?.batches?.rejected || 0}</span>
-                            </div>
+
+                            <p className="text-sm text-[#f5d28e]">
+                                {stats?.batches?.pending || 0} pending approval
+                            </p>
                         </div>
                     </div>
-                </div>
 
-                {/* Order Status */}
-                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-8">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Order Status Overview</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-yellow-600">{stats?.orders?.pending || 0}</p>
-                            <p className="text-xs text-gray-500 mt-1">Pending</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-blue-600">{stats?.orders?.confirmed || 0}</p>
-                            <p className="text-xs text-gray-500 mt-1">Confirmed</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-purple-600">{stats?.orders?.shipped || 0}</p>
-                            <p className="text-xs text-gray-500 mt-1">Shipped</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-green-600">{stats?.orders?.delivered || 0}</p>
-                            <p className="text-xs text-gray-500 mt-1">Delivered</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-red-600">{stats?.orders?.cancelled || 0}</p>
-                            <p className="text-xs text-gray-500 mt-1">Cancelled</p>
+                    {/* ORDERS */}
+                    <div
+                        onClick={() => navigate('/admin/orders')}
+                        style={cardStyle}
+                        className="cursor-pointer rounded-3xl overflow-hidden border border-[#5f7c69]/20 shadow-2xl hover:scale-[1.02] transition-all duration-300"
+                    >
+                        <div className="p-7 backdrop-blur-md">
+
+                            <div className="flex items-center justify-between mb-5">
+                                <div>
+                                    <p className="text-sm text-gray-300 uppercase tracking-wide">
+                                        Total Orders
+                                    </p>
+
+                                    <h2 className="text-5xl font-extrabold mt-3 text-white">
+                                        {stats?.orders?.total || 0}
+                                    </h2>
+                                </div>
+
+                                <div className="w-16 h-16 rounded-2xl bg-[#7a9d76]/30 flex items-center justify-center text-3xl shadow-xl">
+                                    📦
+                                </div>
+                            </div>
+
+                            <p className="text-sm text-[#c7f0c2]">
+                                {stats?.orders?.delivered || 0} delivered
+                            </p>
                         </div>
                     </div>
-                </div>
 
-                {/* Communication Stats */}
-                <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Communication Activity</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-gray-800">{stats?.communication?.total_threads || 0}</p>
-                            <p className="text-xs text-gray-500 mt-1">Total Threads</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-gray-800">{stats?.communication?.total_messages || 0}</p>
-                            <p className="text-xs text-gray-500 mt-1">Total Messages</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-amber-600">{stats?.communication?.unresolved_threads || 0}</p>
-                            <p className="text-xs text-gray-500 mt-1">Unresolved</p>
+                    {/* COFFEE */}
+                    <div
+                        style={cardStyle}
+                        className="rounded-3xl overflow-hidden border border-[#7a9d76]/20 shadow-2xl hover:scale-[1.02] transition-all duration-300"
+                    >
+                        <div className="p-7 backdrop-blur-md">
+
+                            <div className="flex items-center justify-between mb-5">
+                                <div>
+                                    <p className="text-sm text-gray-300 uppercase tracking-wide">
+                                        Total Coffee
+                                    </p>
+
+                                    <h2 className="text-5xl font-extrabold mt-3 text-white">
+                                        {stats?.coffee?.total_kg?.toFixed(0) || 0}
+                                    </h2>
+                                </div>
+
+                                <div className="w-16 h-16 rounded-2xl bg-[#4f6f52]/40 flex items-center justify-center text-3xl shadow-xl">
+                                    ⚖️
+                                </div>
+                            </div>
+
+                            <p className="text-sm text-gray-300">
+                                kilograms
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* SECOND GRID */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+
+                    {/* USERS BY ROLE */}
+                    <div
+                        style={cardStyle}
+                        className="rounded-3xl overflow-hidden border border-[#4f6f52]/20 shadow-2xl"
+                    >
+                        <div className="p-8 backdrop-blur-md">
+                            <h3 className="text-3xl font-bold text-white mb-8">
+                                Users by Role
+                            </h3>
+
+                            <div className="space-y-5">
+
+                                <div className="flex items-center justify-between bg-[#1f3328]/70 p-5 rounded-2xl border border-[#4f6f52]/20">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-2xl">👑</span>
+
+                                        <span className="text-gray-200">
+                                            Admins
+                                        </span>
+                                    </div>
+
+                                    <span className="text-3xl font-bold text-white">
+                                        {stats?.users?.admins || 0}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between bg-[#1f3328]/70 p-5 rounded-2xl border border-[#4f6f52]/20">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-2xl">👔</span>
+
+                                        <span className="text-gray-200">
+                                            Managers
+                                        </span>
+                                    </div>
+
+                                    <span className="text-3xl font-bold text-white">
+                                        {stats?.users?.managers || 0}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between bg-[#3b2b20]/70 p-5 rounded-2xl border border-[#6f4e37]/20">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-2xl">🚚</span>
+
+                                        <span className="text-gray-200">
+                                            Dealers
+                                        </span>
+                                    </div>
+
+                                    <span className="text-3xl font-bold text-white">
+                                        {stats?.users?.dealers || 0}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between bg-[#24392d]/70 p-5 rounded-2xl border border-[#7a9d76]/20">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-2xl">🛒</span>
+
+                                        <span className="text-gray-200">
+                                            Customers
+                                        </span>
+                                    </div>
+
+                                    <span className="text-3xl font-bold text-white">
+                                        {stats?.users?.customers || 0}
+                                    </span>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* BATCH STATUS */}
+                    <div
+                        style={cardStyle}
+                        className="rounded-3xl overflow-hidden border border-[#6f4e37]/20 shadow-2xl"
+                    >
+                        <div className="p-8 backdrop-blur-md">
+                            <h3 className="text-3xl font-bold text-white mb-8">
+                                Batch Status
+                            </h3>
+
+                            <div className="space-y-5">
+
+                                <div className="flex items-center justify-between bg-[#3b2b20]/70 p-5 rounded-2xl border border-[#6f4e37]/20">
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-4 h-4 rounded-full bg-yellow-500"></span>
+
+                                        <span className="text-gray-200">
+                                            Pending
+                                        </span>
+                                    </div>
+
+                                    <span className="text-3xl font-bold text-white">
+                                        {stats?.batches?.pending || 0}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between bg-[#24392d]/70 p-5 rounded-2xl border border-[#7a9d76]/20">
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-4 h-4 rounded-full bg-green-500"></span>
+
+                                        <span className="text-gray-200">
+                                            Approved
+                                        </span>
+                                    </div>
+
+                                    <span className="text-3xl font-bold text-white">
+                                        {stats?.batches?.approved || 0}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between bg-[#3b2020]/70 p-5 rounded-2xl border border-red-500/20">
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-4 h-4 rounded-full bg-red-500"></span>
+
+                                        <span className="text-gray-200">
+                                            Rejected
+                                        </span>
+                                    </div>
+
+                                    <span className="text-3xl font-bold text-white">
+                                        {stats?.batches?.rejected || 0}
+                                    </span>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ORDER STATUS */}
+                <div
+                    style={cardStyle}
+                    className="rounded-3xl overflow-hidden border border-[#4f6f52]/20 shadow-2xl mb-10"
+                >
+                    <div className="p-8 backdrop-blur-md">
+                        <h3 className="text-3xl font-bold text-white mb-8">
+                            Order Status Overview
+                        </h3>
+
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-5">
+
+                            <div className="bg-[#3b2b20]/70 p-6 rounded-2xl border border-[#6f4e37]/20 text-center">
+                                <p className="text-5xl font-extrabold text-[#f5d28e]">
+                                    {stats?.orders?.pending || 0}
+                                </p>
+
+                                <p className="text-gray-300 mt-3">
+                                    Pending
+                                </p>
+                            </div>
+
+                            <div className="bg-[#24392d]/70 p-6 rounded-2xl border border-[#7a9d76]/20 text-center">
+                                <p className="text-5xl font-extrabold text-blue-300">
+                                    {stats?.orders?.confirmed || 0}
+                                </p>
+
+                                <p className="text-gray-300 mt-3">
+                                    Confirmed
+                                </p>
+                            </div>
+
+                            <div className="bg-[#2d2540]/70 p-6 rounded-2xl border border-purple-500/20 text-center">
+                                <p className="text-5xl font-extrabold text-purple-300">
+                                    {stats?.orders?.shipped || 0}
+                                </p>
+
+                                <p className="text-gray-300 mt-3">
+                                    Shipped
+                                </p>
+                            </div>
+
+                            <div className="bg-[#24392d]/70 p-6 rounded-2xl border border-[#7a9d76]/20 text-center">
+                                <p className="text-5xl font-extrabold text-[#c7f0c2]">
+                                    {stats?.orders?.delivered || 0}
+                                </p>
+
+                                <p className="text-gray-300 mt-3">
+                                    Delivered
+                                </p>
+                            </div>
+
+                            <div className="bg-[#3b2020]/70 p-6 rounded-2xl border border-red-500/20 text-center">
+                                <p className="text-5xl font-extrabold text-red-300">
+                                    {stats?.orders?.cancelled || 0}
+                                </p>
+
+                                <p className="text-gray-300 mt-3">
+                                    Cancelled
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                {/* COMMUNICATION */}
+                <div
+                    style={cardStyle}
+                    className="rounded-3xl overflow-hidden border border-[#4f6f52]/20 shadow-2xl mb-10"
+                >
+                    <div className="p-8 backdrop-blur-md">
+                        <h3 className="text-3xl font-bold text-white mb-8">
+                            Communication Activity
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+                            <div className="bg-[#1f3328]/70 p-6 rounded-2xl border border-[#4f6f52]/20">
+                                <p className="text-gray-300 mb-3">
+                                    Total Threads
+                                </p>
+
+                                <p className="text-5xl font-extrabold text-white">
+                                    {stats?.communication?.total_threads || 0}
+                                </p>
+                            </div>
+
+                            <div className="bg-[#24392d]/70 p-6 rounded-2xl border border-[#7a9d76]/20">
+                                <p className="text-gray-300 mb-3">
+                                    Total Messages
+                                </p>
+
+                                <p className="text-5xl font-extrabold text-white">
+                                    {stats?.communication?.total_messages || 0}
+                                </p>
+                            </div>
+
+                            <div className="bg-[#3b2b20]/70 p-6 rounded-2xl border border-[#6f4e37]/20">
+                                <p className="text-gray-300 mb-3">
+                                    Unresolved
+                                </p>
+
+                                <p className="text-5xl font-extrabold text-[#f5d28e]">
+                                    {stats?.communication?.unresolved_threads || 0}
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                {/* QUICK ACTIONS */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
                     <button
                         onClick={() => navigate('/admin/users')}
-                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
+                        className="bg-gradient-to-r from-[#4f6f52] to-[#5f8762] hover:scale-[1.02] text-white px-6 py-5 rounded-3xl font-bold text-lg shadow-2xl transition-all duration-300"
                     >
                         👥 Manage Users
                     </button>
+
                     <button
                         onClick={() => navigate('/admin/reports')}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
+                        className="bg-gradient-to-r from-[#6f4e37] to-[#8a6245] hover:scale-[1.02] text-white px-6 py-5 rounded-3xl font-bold text-lg shadow-2xl transition-all duration-300"
                     >
                         📈 View Reports
                     </button>
+
                     <button
                         onClick={() => navigate('/admin/activity')}
-                        className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
+                        className="bg-gradient-to-r from-[#355c46] to-[#4f6f52] hover:scale-[1.02] text-white px-6 py-5 rounded-3xl font-bold text-lg shadow-2xl transition-all duration-300"
                     >
                         📋 Activity Logs
                     </button>
+
                 </div>
             </div>
         </div>

@@ -25,4 +25,6 @@ urlpatterns = [
     
     # Reports App
     path('api/v1/reports/', include('reports.urls')),
+
+    path('api/', include('chatbot.urls')),
 ]

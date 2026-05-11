@@ -8,67 +8,108 @@ const Navbar = () => {
 
     const handleLogout = () => {
         logout();
-        navigate('/auth'); // Redirect to login after clearing tokens
+        navigate('/auth');
     };
 
     return (
-        <nav className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between h-16 items-center">
-                    
-                    {/* Brand Logo */}
-                    <div className="flex-shrink-0 flex items-center">
-                        <Link to="/" className="text-2xl font-extrabold text-green-700">
+        <nav className="sticky top-0 z-50 border-b border-white/5 bg-[#0b0b0b]/95 backdrop-blur-md shadow-[0_10px_40px_rgba(0,0,0,0.85)] overflow-hidden">
+
+            {/* Ambient Glow */}
+            <div className="absolute top-0 left-1/3 h-40 w-40 rounded-full bg-green-500/10 blur-3xl"></div>
+
+            {/* Top glossy line */}
+            <div className="absolute inset-x-0 top-0 h-[1px] bg-white/10"></div>
+
+            {/* Dark Texture */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_50%)]"></div>
+
+            <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+                <div className="flex h-16 items-center justify-between">
+
+                    {/* Logo */}
+                    <div className="flex items-center">
+
+                        <Link
+                            to="/"
+                            className="text-3xl font-extrabold tracking-wide text-white transition duration-300 hover:text-green-400"
+                        >
                             AgriLink
                         </Link>
-                        <span className="ml-2 text-xs font-bold bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+
+                        <span className="ml-3 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-green-400 shadow-lg shadow-green-900/20">
                             Coffee Hub
                         </span>
+
                     </div>
 
-                    {/* Dynamic Navigation Links */}
-                    <div className="hidden sm:flex sm:space-x-8 text-sm font-medium text-gray-600">
-                        <Link to="/" className="hover:text-green-600 transition">Home</Link>
-                        
-                        {/* Dealer Links */}
+                    {/* Navigation Links */}
+                    <div className="hidden items-center space-x-8 text-sm font-medium text-gray-300 sm:flex">
+
+                        <Link
+                            to="/"
+                            className="transition duration-300 hover:text-green-400"
+                        >
+                            Home
+                        </Link>
+
+                        {/* Dealer */}
                         {user?.role === 'DEALER' && (
-                            <>                               
+                            <>
                             </>
                         )}
 
-                        {/* Admin Links */}
+                        {/* Admin */}
                         {user?.role === 'ADMIN' && (
                             <>
-                                <Link to="/admin" className="text-green-600 font-semibold">Admin Panel</Link>
-                                <Link to="/admin/users" className="hover:text-green-600 transition">Manage Users</Link>
+                                <Link
+                                    to="/admin"
+                                    className="font-semibold text-green-400"
+                                >
+                                    Admin Panel
+                                </Link>
+
+                                <Link
+                                    to="/admin/users"
+                                    className="transition duration-300 hover:text-green-400"
+                                >
+                                    Manage Users
+                                </Link>
                             </>
                         )}
                     </div>
 
-                    {/* Auth Buttons (Sign In / Logout) */}
+                    {/* Right Side */}
                     <div className="flex items-center space-x-4">
+
                         {user ? (
                             <div className="flex items-center space-x-4">
-                                <span className="text-sm text-gray-500">
-                                    Hello, <span className="font-semibold text-gray-700">{user.username}</span>
-                                </span>
+
+                                <div className="hidden text-sm text-gray-400 sm:block">
+                                    Hello,
+                                    <span className="ml-1 font-semibold text-white">
+                                        {user.username}
+                                    </span>
+                                </div>
+
                                 <button
                                     onClick={handleLogout}
-                                    className="text-sm font-medium text-red-600 hover:text-red-500 transition focus:outline-none"
+                                    className="rounded-xl border border-red-500/10 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 transition-all duration-300 hover:bg-red-500/20 hover:text-red-300"
                                 >
                                     Logout
                                 </button>
+
                             </div>
                         ) : (
                             <Link
                                 to="/auth"
-                                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition shadow-sm"
+                                className="rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold tracking-wide text-white shadow-lg shadow-green-900/30 transition-all duration-300 hover:scale-[1.03] hover:bg-green-700"
                             >
                                 Sign In
                             </Link>
                         )}
-                    </div>
 
+                    </div>
                 </div>
             </div>
         </nav>
