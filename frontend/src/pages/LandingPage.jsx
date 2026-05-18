@@ -206,7 +206,7 @@ const LandingPage = () => {
           <p className="text-xl md:text-2xl text-gray-300 leading-relaxed max-w-4xl mx-auto mb-10">
             AgriLink CoffeeHub transforms coffee supply operations with
             intelligent management, analytics, communication, and reporting
-            tools built for modern coffee businesses.
+            tools built for modern coffee businesses!
           </p>
 
           {/* BUTTONS */}
