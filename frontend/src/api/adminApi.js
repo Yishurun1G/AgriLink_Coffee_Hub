@@ -30,7 +30,7 @@ export const createUser = async (userData) => {
 };
 
 export const updateUser = async (userId, userData) => {
-    const response = await axios.put(`/users/admin/users/${userId}/`, userData);
+    const response = await axios.patch(`/users/admin/users/${userId}/`, userData);
     return response.data;
 };
 

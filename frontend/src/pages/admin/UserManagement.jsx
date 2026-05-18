@@ -77,21 +77,35 @@ const UserManagement = () => {
         }
     };
 
-    const handleUpdateUser = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
+   const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
 
-        try {
-            await updateUser(selectedUser.id, formData);
-            setShowEditModal(false);
-            resetForm();
-            fetchUsers();
-        } catch (err) {
-            alert(err.response?.data?.detail || 'Failed to update user');
-        } finally {
-            setSubmitting(false);
-        }
-    };
+    try {
+        const cleanedData = {
+            username: formData.username,
+            email: formData.email,
+            role: formData.role,
+            phone_number: formData.phone_number,
+            location: formData.location,
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            is_active: formData.is_active,
+        };
+
+        await updateUser(selectedUser.id, cleanedData);
+
+        setShowEditModal(false);
+        resetForm();
+        fetchUsers();
+
+    } catch (err) {
+        console.error(err.response?.data);
+        alert(err.response?.data?.detail || 'Failed to update user');
+    } finally {
+        setSubmitting(false);
+    }
+};
 
     const handleToggleActive = async (userId) => {
         if (!confirm("Are you sure you want to change this user's status?")) return;
@@ -116,24 +130,32 @@ const UserManagement = () => {
     };
 
     const handleResetPassword = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
+    e.preventDefault();
+    setSubmitting(true);
 
-        try {
-            await resetUserPassword(selectedUser.id, newPassword);
+    try {
+        await resetUserPassword(
+            selectedUser.id,
+            newPassword
+        );
 
-            setShowPasswordModal(false);
-            setNewPassword('');
-            setSelectedUser(null);
+        alert('Password reset successfully');
 
-            alert('Password reset successfully');
-        } catch (err) {
-            alert(err.response?.data?.error || 'Failed to reset password');
-        } finally {
-            setSubmitting(false);
-        }
-    };
+        setShowPasswordModal(false);
+        setNewPassword('');
+        setSelectedUser(null);
 
+    } catch (err) {
+        console.error(err);
+
+        alert(
+            err.response?.data?.error ||
+            'Failed to reset password'
+        );
+    } finally {
+        setSubmitting(false);
+    }
+};
     const openEditModal = (user) => {
         setSelectedUser(user);
 
@@ -544,17 +566,17 @@ const UserManagement = () => {
                                 </div>
 
                                 <input
-                                    type="text"
-                                    placeholder="Phone"
-                                    value={formData.phone_number}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            phone_number: e.target.value,
-                                        })
-                                    }
-                                    className={inputClass}
-                                />
+    type="text"
+    placeholder="Phone"
+    value={formData.phone_number}
+    onChange={(e) =>
+        setFormData({
+            ...formData,
+            phone_number: e.target.value.replace(/\D/g, ""),
+        })
+    }
+    className={inputClass}
+/>
 
                                 <input
                                     type="text"
@@ -683,7 +705,7 @@ const UserManagement = () => {
                                     onChange={(e) =>
                                         setFormData({
                                             ...formData,
-                                            phone_number: e.target.value,
+                                            phone_number: e.target.value.replace(/\D/g, ''),
                                         })
                                     }
                                     className={inputClass}

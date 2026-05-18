@@ -153,11 +153,11 @@ const RegisterForm = () => {
                 >
                    
                     <option value="DEALER" className="bg-[#1b1b1b]">
-                        Dealer - I supply coffee batches
+                        Dealer
                     </option>
 
                     <option value="CUSTOMER" className="bg-[#1b1b1b]">
-                        Customer - I trace coffee
+                        Customer 
                     </option>
 
         
@@ -171,13 +171,20 @@ const RegisterForm = () => {
                 </label>
 
                 <input
-                    name="phone_number"
-                    type="text"
-                    value={formData.phone_number}
-                    onChange={handleChange}
-                    placeholder="+2519********"
-                    className="w-full rounded-2xl border border-white/5 bg-[#1b1b1b] px-4 py-3 text-white placeholder:text-gray-500 outline-none transition-all duration-300 focus:border-green-500/40 focus:bg-[#202020] focus:ring-2 focus:ring-green-500/20"
-                />
+    name="phone_number"
+    type="text"
+    value={formData.phone_number}
+    onChange={(e) => {
+        const onlyNumbers = e.target.value.replace(/\D/g, "");
+
+        setFormData({
+            ...formData,
+            phone_number: onlyNumbers,
+        });
+    }}
+    placeholder="+2519********"
+    className="w-full rounded-2xl border border-white/5 bg-[#1b1b1b] px-4 py-3 text-white placeholder:text-gray-500 outline-none transition-all duration-300 focus:border-green-500/40 focus:bg-[#202020] focus:ring-2 focus:ring-green-500/20"
+/>
             </div>
 
             {/* Password */}
